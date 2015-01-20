@@ -5,6 +5,8 @@
 docs/*
 # Ignore development files
 dev/*
+# Ignore emacs backups
+*~
 # Ignore stuff in the build dirs except the makefiles
 build/*
 !build/lcncluster/Makefile
