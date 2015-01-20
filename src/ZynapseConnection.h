@@ -79,7 +79,8 @@ using namespace std;
 
 /*! \brief Implements complex synapse as described by Ziegler et al. 2015.
  */
-class ZynapseConnection : public DuplexConnection
+// HERE compare with triplet to save some rewriting
+class ZynapseConnection : public TripletConnection
 {
 private:
 
