@@ -1,8 +1,9 @@
-SRCDIR=../../src# outside of submodule
-EXADIR=../../examples# outside of submodule
+SRCDIR=../../src
+EXADIR=../../examples
 
 DEVDIR=../../dev/src
 SIMDIR=../../dev/sim
+
 
 
 DO_NOT_BUILD = clIFGroup.o 
@@ -28,23 +29,24 @@ OBJ_MONITORS = Checker.o RateChecker.o PatternStimulator.o PoissonStimulator.o $
 ALL_OBJECTS = auryn_definitions.o auryn_global.o System.o $(OBJ_GENERIC) $(OBJ_GROUPS) $(OBJ_CONNECTIONS) $(OBJ_MONITORS)  
 OBJECTS = $(subst $(DO_NOT_BUILD),,$(ALL_OBJECTS))
 
-main: lib 
+main: lib examples
 
-all: simulations tests
-
-simulations: $(BIN_SIMS)
-
-examples: $(BIN_EXAMPLES)
+all: main simulations tests
 
 lib: libauryn.a
 
 libauryn.a: $(OBJECTS)
 	ar rcs libauryn.a $(OBJECTS)
 
+examples: $(BIN_EXAMPLES)
+
+simulations: $(BIN_SIMS)
+
+
 tests: $(TESTFILES)
 
-sim_%: sim_%.o $(OBJECTS) 
-	$(CC) $(CFLAGS) $< $(OBJECTS) $(LDFLAGS) -o $(subst .o,,$<)
+sim_%: sim_%.o libauryn.a
+	$(CC) $(CFLAGS) $< -L. -lauryn $(LDFLAGS) -o $(subst .o,,$<)
 
 mpi_latency: $(SIMDIR)/mpi_latency.c
 	$(CC) $(CFLAGS) $(LDFLAGS) $< -o mpi_latency 
@@ -55,16 +57,16 @@ mpi_allgather_latency: $(SIMDIR)/mpi_allgather_latency.c
 test_%: test_%.o $(OBJECTS) 
 	$(CC) $(CFLAGS) $< $(OBJECTS) $(LDFLAGS) -o $(subst .o,,$<)
 
-%.o : $(EXADIR)/%.h
+%.o : $(EXADIR)/%.cpp
 	$(CC) $(CFLAGS) -c $<
 
-%.o : $(DEVDIR)/%.h
+%.o : $(DEVDIR)/%.cpp
 	$(CC) $(CFLAGS) -c $<
 
-%.o : $(SIMDIR)/%.h
+%.o : $(SIMDIR)/%.cpp
 	$(CC) $(CFLAGS) -c $<
 
-%.o : $(SRCDIR)/%.h
+%.o : $(SRCDIR)/%.cpp
 	$(CC) $(CFLAGS) -c $<
 
 

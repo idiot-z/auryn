@@ -16,11 +16,6 @@
 * 
 * You should have received a copy of the GNU General Public License
 * along with Auryn.  If not, see <http://www.gnu.org/licenses/>.
-*
-* If you are using Auryn or parts of it for your work please cite:
-* Zenke, F. and Gerstner, W., 2014. Limits to high-speed simulations 
-* of spiking neural networks using general-purpose computers. 
-* Front Neuroinform 8, 76. doi: 10.3389/fninf.2014.00076
 */
 
 #ifndef STDPCONNECTION_H_
@@ -36,51 +31,36 @@
 using namespace std;
 
 
-/*! \brief Doublet STDP All-to-All as implemented in NEST as stdp_synapse_hom 
+/*! \brief Double STDP All-to-All Connection
  *
- * This class implements a range of doublet STDP rules.
- *
+ * This class implements standard STDP with a double exponential window and optinal
+ * offset terms. Window amplitudes and time constants are freely configurable.
  */
 class STDPConnection : public DuplexConnection
 {
 
 private:
-	AurynWeight learning_rate;
-
-	AurynWeight param_lambda;
-	AurynWeight param_alpha;
-
-	AurynWeight param_mu_plus;
-	AurynWeight param_mu_minus;
-
-	void init(AurynWeight lambda, AurynWeight maxweight);
-	void init_shortcuts();
+	void init(AurynFloat eta, AurynFloat maxweight);
 
 protected:
 
-	AurynWeight tau_plus;
-	AurynWeight tau_minus;
+	AurynFloat tau_pre;
+	AurynFloat tau_post;
 
-	NeuronID * fwd_ind; 
-	AurynWeight * fwd_data;
-
-	NeuronID * bkw_ind; 
-	AurynWeight ** bkw_data;
+	AurynDouble hom_fudge;
 
 	PRE_TRACE_MODEL * tr_pre;
 	DEFAULT_TRACE_MODEL * tr_post;
 
-
-	AurynWeight fudge_pot;
-	AurynWeight fudge_dep;
-
-
 	void propagate_forward();
 	void propagate_backward();
 
-	void compute_fudge_factors();
+	AurynWeight dw_pre(NeuronID post);
+	AurynWeight dw_post(NeuronID pre);
 
 public:
+	AurynFloat A; /*!< Amplitude of post-pre part of the STDP window */
+	AurynFloat B; /*!< Amplitude of pre-post part of the STDP window */
 
 	bool stdp_active;
 
@@ -89,24 +69,16 @@ public:
 
 	STDPConnection(SpikingGroup * source, NeuronGroup * destination, 
 			const char * filename, 
-			AurynWeight lambda=1e-5, 
-			AurynWeight maxweight=0.1 , 
+			AurynFloat eta=1, 
+			AurynFloat maxweight=1. , 
 			TransmitterType transmitter=GLUT);
 
 	STDPConnection(SpikingGroup * source, NeuronGroup * destination, 
-			AurynWeight weight, AurynWeight sparseness=0.05, 
-			AurynWeight lambda=0.01, 
-			AurynWeight maxweight=100. , 
+			AurynWeight weight, AurynFloat sparseness=0.05, 
+			AurynFloat eta=1, 
+			AurynFloat maxweight=1. , 
 			TransmitterType transmitter=GLUT,
 			string name = "STDPConnection" );
-
-	void set_alpha(AurynWeight a);
-	void set_lambda(AurynWeight l);
-
-	void set_mu_plus(AurynWeight m);
-	void set_mu_minus(AurynWeight m);
-
-	void set_max_weight(AurynWeight w);
 
 	virtual ~STDPConnection();
 	virtual void finalize();
