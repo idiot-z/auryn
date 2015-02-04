@@ -23,8 +23,8 @@
 * Front Neuroinform 8, 76. doi: 10.3389/fninf.2014.00076
 */
 
-#ifndef TRIPLETCONNECTION_H_
-#define TRIPLETCONNECTION_H_
+#ifndef LPTRIPLETCONNECTION_H_
+#define LPTRIPLETCONNECTION_H_
 
 #include "auryn_definitions.h"
 #include "DuplexConnection.h"
@@ -37,14 +37,9 @@
 using namespace std;
 
 
-/*! \brief Implements triplet STDP as described by Pfister and Gerstner 2006.
- *
- * This is the connection used for most simulations in Zenke et al. 2013 to 
- * simulate large plastic recurrent networks with homeostatic triplet STDP.
- * Time timescale of the moving average used for the homeostatic change of the
- * LTD rate is given by tau.
+/*! \brief Implements triplet STDP in which weight updates are low-pass filtered.
  */
-class TripletConnection : public DuplexConnection
+class LPTripletConnection : public DuplexConnection
 {
 
 private:
@@ -61,6 +56,10 @@ private:
 		finalize();
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+	AurynFloat tau_lp;
+	AurynFloat delta_lp;
+	AurynTime timestep_lp;
 
 	void init(AurynFloat tau_hom, AurynFloat eta, AurynFloat kappa, AurynFloat maxweight);
 	void init_shortcuts();
@@ -91,9 +90,12 @@ protected:
 	DEFAULT_TRACE_MODEL * tr_post2;
 	DEFAULT_TRACE_MODEL * tr_post_hom;
 
+
+	// temporary state vector
+	AurynWeight * temp_state;
+
 	void propagate_forward();
 	void propagate_backward();
-	void sort_spikes();
 
 	/*! Action on weight upon presynaptic spike on connection with postsynaptic
 	 * partner post. This function should be modified to define new spike based
@@ -109,7 +111,6 @@ protected:
 	 */ 
 	AurynWeight dw_post(NeuronID pre, NeuronID post);
 
-
 public:
 	AurynFloat A3_plus;
 
@@ -117,10 +118,10 @@ public:
 	/*! Toggle stdp active/inactive. When inactive traces are still updated, but weights are not. */
 	bool stdp_active;
 
-	TripletConnection(SpikingGroup * source, NeuronGroup * destination, 
+	LPTripletConnection(SpikingGroup * source, NeuronGroup * destination, 
 			TransmitterType transmitter=GLUT);
 
-	TripletConnection(SpikingGroup * source, NeuronGroup * destination, 
+	LPTripletConnection(SpikingGroup * source, NeuronGroup * destination, 
 			const char * filename, 
 			AurynFloat tau_hom=10, 
 			AurynFloat eta=1, 
@@ -138,15 +139,15 @@ public:
 	 * @param transmitter the TransmitterType (default is GLUT, glutamatergic).
 	 * @param name a sensible identifier for the connection used in debug output.
 	 */
-	TripletConnection(SpikingGroup * source, NeuronGroup * destination, 
+	LPTripletConnection(SpikingGroup * source, NeuronGroup * destination, 
 			AurynWeight weight, AurynFloat sparseness=0.05, 
 			AurynFloat tau_hom=10, 
 			AurynFloat eta=1, 
 			AurynFloat kappa=3., AurynFloat maxweight=1. , 
 			TransmitterType transmitter=GLUT,
-			string name = "TripletConnection" );
+			string name = "LPTripletConnection" );
 
-	virtual ~TripletConnection();
+	virtual ~LPTripletConnection();
 	virtual void finalize();
 	void free();
 
@@ -157,4 +158,4 @@ public:
 
 };
 
-#endif /*TRIPLETCONNECTION_H_*/
+#endif /*LPTRIPLETCONNECTION_H_*/

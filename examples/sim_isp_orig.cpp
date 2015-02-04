@@ -40,7 +40,7 @@ int main(int ac, char* av[])
 	double eta = 1e-4 ;
 	double kappa = 3. ;
 	double tau_stdp = 20e-3 ;
-	bool stdp_active = true;
+	bool stdp_active = false;
 	bool poisson_stim = false;
 	double winh = -1;
 	double wei = 1;
@@ -57,6 +57,7 @@ int main(int ac, char* av[])
 	
 	string infilename = "";
 	string outputfile = "out";
+	string netstatfile = "";
 	string stimfile = "";
 	string strbuf ;
 
@@ -175,9 +176,10 @@ int main(int ac, char* av[])
 	mpi::communicator world;
 	communicator = &world;
 
+	netstatfile = outputfile;
 	stringstream oss;
 	oss << outputfile << "." << world.rank();
-	outputfile = oss.str();
+	string basename = oss.str();
 	oss << ".log";
 	string logfile = oss.str();
 	logger = new Logger(logfile,world.rank());
@@ -207,32 +209,29 @@ int main(int ac, char* av[])
 			gamma*eta,kappa,tau_stdp,wmax,
 			GABA);
 
-	if (!infilename.empty()) {
-		sys->load_network_state(infilename);
-	}
 
 	if (winh>=0)
 		con_ie->set_all(winh);
 
 	logger->msg("Setting up monitors ...",PROGRESS,true);
-	strbuf = outputfile;
-	strbuf += "_e.ras";
+	strbuf = basename;
+	strbuf += ".e.ras";
 	SpikeMonitor * smon_e = new SpikeMonitor( neurons_e , strbuf.c_str() );
 
-	strbuf = outputfile;
-	strbuf += "_i.ras";
+	strbuf = basename;
+	strbuf += ".i.ras";
 	SpikeMonitor * smon_i = new SpikeMonitor( neurons_i, strbuf.c_str() );
 	smon_i->set_offset(NE);
 
-	strbuf = outputfile;
+	strbuf = basename;
 	strbuf += ".volt";
 	StateMonitor * vmon = new StateMonitor( neurons_e, record_neuron, "mem", strbuf.c_str() );
 
-	strbuf = outputfile;
+	strbuf = basename;
 	strbuf += ".ampa";
 	StateMonitor * amon = new StateMonitor( neurons_e, record_neuron, "g_ampa", strbuf.c_str() );
 
-	strbuf = outputfile;
+	strbuf = basename;
 	strbuf += ".gaba";
 	StateMonitor * gmon = new StateMonitor( neurons_e, record_neuron, "g_gaba", strbuf.c_str() );
 
@@ -245,6 +244,7 @@ int main(int ac, char* av[])
 	for ( int j = 0; j < NI ; j++ ) {
 	  neurons_i->set_bg_current(j,bg_current);
 	}
+
 	
 	// stimulus
 	if (!stimfile.empty()) {
@@ -266,6 +266,9 @@ int main(int ac, char* av[])
 		fin.close();
 	}
 
+	if (!infilename.empty()) {
+		sys->load_network_state(infilename);
+	}
 
 	logger->msg("Simulating ...",PROGRESS,true);
 	con_ie->stdp_active = stdp_active;
@@ -273,7 +276,7 @@ int main(int ac, char* av[])
 	sys->run(simtime);
 
 	logger->msg("Saving network state ...",PROGRESS,true);
-	sys->save_network_state(outputfile);
+	sys->save_network_state(netstatfile);
 
 	logger->msg("Freeing ...",PROGRESS,true);
 	delete sys;

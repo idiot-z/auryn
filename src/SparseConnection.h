@@ -29,7 +29,7 @@
 #include "auryn_definitions.h"
 #include "Connection.h"
 #include "System.h"
-#include "SimpleMatrix.h"
+#include "ComplexMatrix.h"
 
 #include <sstream>
 #include <fstream>
@@ -47,7 +47,7 @@
 
 using namespace std;
 
-typedef SimpleMatrix<AurynWeight> ForwardMatrix;
+typedef ComplexMatrix<AurynWeight> ForwardMatrix;
 
 
 /*! \brief The base class to create sparse random connections
@@ -71,6 +71,18 @@ private:
 	bool init_from_file(const char * filename);
 
 protected:
+	void virtual_serialize(boost::archive::binary_oarchive & ar, const unsigned int version ) 
+	{
+		Connection::virtual_serialize(ar,version);
+		ar & *w;
+	}
+
+	void virtual_serialize(boost::archive::binary_iarchive & ar, const unsigned int version ) 
+	{
+		Connection::virtual_serialize(ar,version);
+		ar & *w;
+	}
+
 	static boost::mt19937 sparse_connection_gen;
 
 	AurynWeight wmin;

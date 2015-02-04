@@ -44,6 +44,18 @@
 
 #include <boost/mpi.hpp>
 
+#include <boost/archive/text_oarchive.hpp> 
+#include <boost/archive/text_iarchive.hpp> 
+#include <boost/archive/binary_oarchive.hpp> 
+#include <boost/archive/binary_iarchive.hpp> 
+
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/map.hpp>
+
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/variate_generator.hpp>
+#include <boost/random/normal_distribution.hpp>
+
 #include "Logger.h"
 
 using namespace std;
@@ -75,7 +87,7 @@ namespace mpi = boost::mpi;
 
 #define SIMD_NUM_OF_PARALLEL_FLOAT_OPERATIONS 4 //!< SSE can process 4 floats in parallel
 
-#define CODE_COLLECT_SYNC_TIMING_STATS //!< toggle  collection of timing data on sync/all_gather
+// #define CODE_COLLECT_SYNC_TIMING_STATS //!< toggle  collection of timing data on sync/all_gather
 
 /*! System wide integration time step */
 const double dt = 1.0e-4;
@@ -120,8 +132,9 @@ enum TransmitterType {
 enum StimulusGroupModeType { MANUAL, RANDOM, SEQUENTIAL, SEQUENTIAL_REV, STIMFILE };
 
 
-typedef unsigned int NeuronID; //!< NeuronID is an unsigned integeger type used to index neurons in Auryns.
+typedef unsigned int NeuronID; //!< NeuronID is an unsigned integeger type used to index neurons in Auryn.
 typedef NeuronID AurynInt;
+typedef unsigned int StateID; //!< StateID is an unsigned integeger type used to index synaptic states in Auryn.
 typedef unsigned long AurynLong; //!< An unsigned long type used to count synapses or similar. 
 typedef NeuronID AurynTime; //!< Defines Auryns discrete time unit of the System clock.  Change to AurynLong if 120h of simtime are not sufficient
 typedef float AurynFloat; //!< Low precision floating point datatype.
@@ -137,6 +150,14 @@ template <typename T>
 struct auryn_vector { 
     NeuronID size;
     T * data;
+
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & size;
+		for ( NeuronID i = 0 ; i < size ; ++i ) 
+			ar & data[i];
+	}
 };
 
 /*! Reimplements a simplified version of the GSL vector. */

@@ -49,48 +49,18 @@ class SpikeDelay
 	private:
 		friend class boost::serialization::access;
 		template<class Archive>
-		void save(Archive & ar, const unsigned int version) const
-			{
-				for (NeuronID i = 0 ; i < ndelay ; ++i ) {
-					SpikeContainer * sc = delaybuf[i];
-					NeuronID s = (int) (sc->size());
-					ar & s;
-					for (SpikeContainer::const_iterator spike = sc->begin() ; 
-							spike != sc->end() ; ++spike ) {
-							ar & *spike;
-					}
+		void serialize(Archive & ar, const unsigned int version)
+		{
+			for (unsigned int i = 0 ; i < ndelay ; ++i ) {
+				SpikeContainer * sc = get_spikes(i);
+				ar & *sc;
+			}
 
-					AttributeContainer * ac = attribbuf[i];
-					s = (int) (ac->size());
-					ar & s;
-					for (AttributeContainer::const_iterator attrib = ac->begin() ; 
-							attrib != ac->end() ; ++attrib ) {
-							ar & *attrib;
-					}
-				}
+			for (unsigned int i = 0 ; i < ndelay ; ++i ) {
+				AttributeContainer * ac = get_attributes(i);
+				ar & *ac;
 			}
-		template<class Archive>
-		void load(Archive & ar, const unsigned int version)
-			{
-				for (NeuronID i = 0 ; i < ndelay ; ++i ) {
-					NeuronID len;
-					ar & len;
-					delaybuf[i]->clear();
-					for (NeuronID j = 0 ; j < len ; ++j) {
-						NeuronID spike;
-						ar & spike;
-						delaybuf[i]->push_back(spike);
-					}
-					ar & len;
-					attribbuf[i]->clear();
-					for (NeuronID j = 0 ; j < len ; ++j) {
-						AurynFloat attrib;
-						ar & attrib;
-						attribbuf[i]->push_back(attrib);
-					}
-				}
-			}
-		BOOST_SERIALIZATION_SPLIT_MEMBER()
+		}
 
 		SpikeContainer ** delaybuf;
 		AttributeContainer ** attribbuf;
@@ -133,8 +103,5 @@ class SpikeDelay
 		void clear();
 };
 
-BOOST_CLASS_TRACKING(SpikeDelay,track_never)
-// BOOST_CLASS_IMPLEMENTATION(SpikeDelay,object_serializable)
-// BOOST_SERIALIZATION_ASSUME_ABSTRACT(SpikeDelay)
 
 #endif /*SPIKEDELAY_H_*/

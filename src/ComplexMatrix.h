@@ -54,13 +54,25 @@ private:
 		{
 			ar & m_rows;
 			ar & n_cols;
+			ar & z_values;
+			ar & current_row;
+			ar & current_col;
 			ar & statesize;
 			ar & n_nonzero;
-			for (NeuronID i = 0 ; i < m_rows ; ++i) {
-				for (NeuronID * r = rowptrs[i] ; r < rowptrs[i+1] ; ++r ) {
-					ar & i;
-					ar & *r;
-					ar & coldata[r-colinds];
+
+			// rowpointers -- translate in elements per row
+			for ( NeuronID i = 0 ; i < m_rows+1 ; ++i ) {
+				NeuronID num_elements = rowptrs[i]-rowptrs[0];
+				ar & num_elements;
+			}
+			// colindices
+			for (AurynLong i = 0 ; i < n_nonzero ; ++i) {
+				ar & colinds[i];
+			}
+			// data
+			for (StateID z = 0; z < z_values ; ++z ) {
+				for (AurynLong i = 0 ; i < n_nonzero ; ++i) {
+					ar & elementdata[i+z*statesize];
 				}
 			}
 		}
@@ -69,19 +81,30 @@ private:
 		{
 			ar & m_rows;
 			ar & n_cols;
+			ar & z_values;
+			ar & current_row;
+			ar & current_col;
 			ar & statesize;
-			resize_buffer_and_clear(statesize);
+			ar & n_nonzero;
 
-			AurynLong nnz;
-			ar & nnz;
+			// allocate necessary memory
+			resize_buffer(statesize);
 
-			for (AurynLong c = 0 ; c < nnz ; ++c) {
-				NeuronID i,j;
-				T val;
-				ar & i;
-				ar & j;
-				ar & val;
-				push_back(i,j,val);
+			// rowpointers -- translate in elements per row
+			for ( NeuronID i = 0 ; i < m_rows+1 ; ++i ) {
+				NeuronID num_elements;
+				ar & num_elements;
+				rowptrs[i] = rowptrs[0]+num_elements;
+			}
+			// colindices
+			for (AurynLong i = 0 ; i < n_nonzero ; ++i) {
+				ar & colinds[i];
+			}
+			// data
+			for (StateID z = 0; z < z_values ; ++z ) {
+				for (AurynLong i = 0 ; i < n_nonzero ; ++i) {
+					ar & elementdata[i+z*statesize];
+				}
 			}
 		}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -102,16 +125,16 @@ protected:
 	/*! Array that holds the column indices of non-zero elements */
 	NeuronID * colinds;
 	/*! Array that holds the data values of the non-zero elements */
-	T * coldata; 
+	T * elementdata; 
 
 	/*! Default initializiation called by the constructor. */
-	void init(NeuronID m, NeuronID n, NeuronID z, AurynLong size);
+	void init(NeuronID m, NeuronID n, AurynLong size, NeuronID z );
 	void free();
 
 public:
 	ComplexMatrix();
 	ComplexMatrix(ComplexMatrix * mat);
-	ComplexMatrix(NeuronID rows, NeuronID cols, NeuronID values=1, AurynLong size=256);
+	ComplexMatrix(NeuronID rows, NeuronID cols, AurynLong size=256, NeuronID values=1 );
 	virtual ~ComplexMatrix();
 
 	void clear();
@@ -139,7 +162,14 @@ public:
 	void copy(ComplexMatrix * mat);
 	void set_data(AurynLong i, T value);
 	void scale_data(AurynLong i, T value);
-	T get_data(AurynLong i, NeuronID state=0);
+	/*! Gets the matching data ptr for a given index i and state z*/
+	T * get_data_ptr(AurynLong i, StateID z=0);
+	/*! Gets the matching data entry for a given index i and state z*/
+	T get_data(AurynLong i, StateID z=0);
+	/*! Gets the matching data ptr for a given index pointer and state z*/
+	T * get_data_ptr(const NeuronID * ind_ptr, StateID z=0);
+	/*! Gets the matching data value for a given index pointer and state z*/
+	T get_data(const NeuronID * ind_ptr, StateID z=0);
 	void fill_zeros();
 	AurynDouble get_fill_level();
 	T get(NeuronID i, NeuronID j, NeuronID z=0);
@@ -152,18 +182,27 @@ public:
 	T * get_ptr(AurynLong data_index);
 
 	/* Methods concerning synaptic state vectors. */
-	T * get_state_begin(NeuronID z=0);
-	T * get_state_end(NeuronID z=0);
+	void set_num_synapse_states(StateID zsize);
+	/*! Gets pointer for the first element of a given synaptic state vector */
+	T * get_state_begin(StateID z=0);
+	/*! Gets pointer for the element behind the last of a given synaptic state vector */
+	T * get_state_end(StateID z=0);
 	/*! Sets all values in state x to value. */
-	void state_set_all(NeuronID x, T value);
+	void state_set_all(AurynWeight * x, T value);
 	/*! Computes a*x + y and stores result in y */
-	void state_saxpy(T a, NeuronID x, NeuronID y);
+	void state_saxpy(T a, AurynWeight * x, AurynWeight * y);
 	/*! Multiplies x and y and stores result in y */
-	void state_mul(NeuronID x, NeuronID y);
+	void state_mul(AurynWeight * x, AurynWeight * y);
+	/*! Adds x and y and stores result in y */
+	void state_add(AurynWeight * x, AurynWeight * y);
+	/*! Computes x-y and stores result in y */
+	void state_sub(AurynWeight * x, AurynWeight * y);
+	/*! Computes x-y and stores result in res */
+	void state_sub(AurynWeight * x, AurynWeight * y, AurynWeight * res);
 	/*! Scale state x by a. */
-	void state_scale(T a, NeuronID x);
+	void state_scale(T a, AurynWeight * x);
 	/*! Adds constant a to all values in x */
-	void state_add_const(T a, NeuronID x);
+	void state_add_const(T a, AurynWeight * x);
 
 	T get_value(AurynLong data_index);
 	void add_value(AurynLong data_index, T value);
@@ -190,6 +229,7 @@ public:
 	AurynLong get_memsize();
 	/*! Returns number of non-zero elements */
 	AurynLong get_nonzero();
+	/*! stdout dump of all elements -- for testing only. */
 	void print();
 	double mean();
 	NeuronID * get_ind_begin();
@@ -199,9 +239,10 @@ public:
 	AurynLong get_row_end_index(NeuronID i);
 	NeuronID get_m_rows();
 	NeuronID get_n_cols();
+	NeuronID get_z_values();
 	NeuronID ** get_rowptrs();
-	T * get_data_begin();
-	T * get_data_end();
+	T * get_data_begin(const StateID z=0);
+	T * get_data_end(const StateID z=0);
 	/*! Returns the data value to an item that is i-th in the colindex array */
 	T get_value(NeuronID i);
 	/*! Returns the data value to an item that for pointer r pointing to the respective element in the index array */
@@ -214,23 +255,45 @@ public:
 };
 
 template <typename T>
-T ComplexMatrix<T>::get_data(AurynLong i, NeuronID state)
+T * ComplexMatrix<T>::get_data_ptr(AurynLong i, StateID z)
 {
-	return coldata[i+get_datasize()*state];
+	return elementdata+z*get_datasize()+i;
 }
 
+template <typename T>
+T ComplexMatrix<T>::get_data(AurynLong i, StateID z)
+{
+	return elementdata[z*get_datasize()+i];
+}
+
+template <typename T>
+T * ComplexMatrix<T>::get_data_ptr(const NeuronID * ind_ptr, StateID z) 
+{
+	size_t ptr_offset = ind_ptr-get_ind_begin();
+	return elementdata+ptr_offset;
+}
+
+template <typename T>
+T ComplexMatrix<T>::get_data(const NeuronID * ind_ptr, StateID z) 
+{
+	return *(get_data_ptr(ind_ptr));
+}
+
+
+//FIXME the following functions still need to have added z value support
 template <typename T>
 void ComplexMatrix<T>::set_data(AurynLong i, T value)
 {
 	if (i<statesize)
-		coldata[i] = value;
+		elementdata[i] = value;
 }
 
+//FIXME the following functions still need to have added z value support
 template <typename T>
 void ComplexMatrix<T>::scale_data(AurynLong i, T value)
 {
 	if (i<statesize)
-		coldata[i] *= value;
+		elementdata[i] *= value;
 }
 
 
@@ -245,17 +308,17 @@ void ComplexMatrix<T>::clear()
 }
 
 template <typename T>
-void ComplexMatrix<T>::init(NeuronID m, NeuronID n, NeuronID z, AurynLong size)
+void ComplexMatrix<T>::init(NeuronID m, NeuronID n, AurynLong size, NeuronID z)
 {
 	m_rows = m;
 	n_cols = n;
+	statesize = size; // assumed maximum number of connections
 	z_values = z;
 	
-	statesize = size;
 
 	rowptrs = new NeuronID * [m_rows+1];
 	colinds = new NeuronID [get_datasize()];
-	coldata = new T [get_memsize()];
+	elementdata = new T [get_memsize()];
 	clear();
 }
 
@@ -276,17 +339,17 @@ void ComplexMatrix<T>::resize_buffer(AurynLong size)
 	delete [] colinds;
 	colinds = new_colinds;
 
-	T * new_coldata = new T [get_memsize()];
-	std::copy(coldata, coldata+get_datasize(), new_coldata);
-	delete [] coldata;
-	coldata = new_coldata;
+	T * new_elementdata = new T [get_memsize()];
+	std::copy(elementdata, elementdata+get_datasize(), new_elementdata);
+	delete [] elementdata;
+	elementdata = new_elementdata;
 }
 
 template <typename T>
 void ComplexMatrix<T>::resize_buffer_and_clear(AurynLong size)
 {
 	free();
-	init(m_rows, n_cols, z_values, size);
+	init(m_rows, n_cols, size, z_values );
 }
 
 template <typename T>
@@ -299,20 +362,20 @@ void ComplexMatrix<T>::prune()
 template <typename T>
 ComplexMatrix<T>::ComplexMatrix()
 {
-	init(1,1);
+	init(1,1,2,1);
 }
 
 template <typename T>
 ComplexMatrix<T>::ComplexMatrix(ComplexMatrix * mat)
 {
-	init(mat->get_m_rows(),mat->get_n_cols(),mat->get_nonzero());
+	init(mat->get_m_rows(), mat->get_n_cols(), mat->get_nonzero(), mat->get_z_values() );
 	copy(mat);
 }
 
 template <typename T>
-ComplexMatrix<T>::ComplexMatrix(NeuronID rows, NeuronID cols, NeuronID values, AurynLong statesize)
+ComplexMatrix<T>::ComplexMatrix(NeuronID rows, NeuronID cols, AurynLong statesize, NeuronID values )
 {
-	init(rows,cols,values,statesize);
+	init(rows, cols, statesize, values);
 }
 
 template <typename T>
@@ -320,7 +383,7 @@ void ComplexMatrix<T>::free()
 {
 	delete [] rowptrs;
 	delete [] colinds;
-	delete [] coldata;
+	delete [] elementdata;
 }
 
 template <typename T>
@@ -358,7 +421,7 @@ void ComplexMatrix<T>::push_back(NeuronID i, NeuronID j, T value)
 	if (i >= current_row && j >= current_col) {
 		if ( n_nonzero >= get_datasize() ) throw AurynMatrixBufferException();
 		*(rowptrs[i+1]) = j; // write last j to end of index array
-		coldata[rowptrs[i+1]-colinds] = value; // write value to end of data array
+		elementdata[rowptrs[i+1]-colinds] = value; // write value to end of data array
 		++rowptrs[i+1]; //increment end by one
 		rowptrs[m_rows] = rowptrs[i+1]; // last (m_row+1) marks end of last row
 		n_nonzero++;
@@ -419,6 +482,13 @@ bool ComplexMatrix<T>::exists(NeuronID i, NeuronID j)
 }
 
 template <typename T>
+void ComplexMatrix<T>::set_num_synapse_states(StateID zsize)
+{
+	z_values = zsize;
+	resize_buffer(statesize);
+}
+
+template <typename T>
 T * ComplexMatrix<T>::get_state_begin(NeuronID z)
 {
 	return get_ptr(get_datasize()*z);
@@ -455,7 +525,7 @@ T * ComplexMatrix<T>::get_ptr(NeuronID i, NeuronID j)
 	}
 	
 	if ( *lo == j ) {
-		return coldata+(lo-colinds);
+		return elementdata+(lo-colinds);
 	}
 
 	return NULL; 
@@ -464,19 +534,19 @@ T * ComplexMatrix<T>::get_ptr(NeuronID i, NeuronID j)
 template <typename T>
 T * ComplexMatrix<T>::get_ptr(AurynLong data_index)
 {
-	return &coldata[data_index];
+	return &elementdata[data_index];
 }
 
 template <typename T>
 T ComplexMatrix<T>::get_value(AurynLong data_index)
 {
-	return coldata[data_index];
+	return elementdata[data_index];
 }
 
 template <typename T>
 void ComplexMatrix<T>::add_value(AurynLong data_index, T value)
 {
-	coldata[data_index] += value;
+	elementdata[data_index] += value;
 }
 
 template <typename T>
@@ -505,7 +575,7 @@ void ComplexMatrix<T>::scale_row(NeuronID i, T value)
 
 	for (NeuronID * c = rowbegin ; c <= rowend ; ++c) 
 	{
-		coldata[c-colinds] *= value;
+		elementdata[c-colinds] *= value;
 	}
 }
 
@@ -524,7 +594,7 @@ void ComplexMatrix<T>::set_row(NeuronID i, T value)
 
 	for (NeuronID * c = rowbegin ; c <= rowend ; ++c) 
 	{
-		coldata[c-colinds] = value;
+		elementdata[c-colinds] = value;
 	}
 }
 
@@ -600,15 +670,15 @@ NeuronID ** ComplexMatrix<T>::get_rowptrs()
 }
 
 template <typename T>
-T * ComplexMatrix<T>::get_data_begin()
+T * ComplexMatrix<T>::get_data_begin(StateID z)
 {
-	return coldata;
+	return get_data_ptr((AurynLong)0,z);
 }
 
 template <typename T>
-T * ComplexMatrix<T>::get_data_end()
+T * ComplexMatrix<T>::get_data_end(StateID z)
 {
-	return coldata+get_nonzero();
+	return get_data_ptr(get_nonzero(),z);
 }
 
 
@@ -631,11 +701,18 @@ NeuronID ComplexMatrix<T>::get_n_cols()
 }
 
 template <typename T>
+NeuronID ComplexMatrix<T>::get_z_values()
+{
+	return z_values;
+}
+
+template <typename T>
 void ComplexMatrix<T>::print()
 {
 	for (NeuronID i = 0 ; i < m_rows ; ++i) {
 		for (NeuronID * r = get_row_begin(i) ; r != get_row_end(i) ; ++r ) {
-			cout << i << " " << *r << " " << coldata[r-colinds] << "\n";
+			cout << i << " " << *r << " " << elementdata[r-colinds] << "\n"; 
+			// FIXME not dumping the other states yet
 		}
 	}
 }
@@ -645,57 +722,72 @@ double ComplexMatrix<T>::mean()
 {
 	double sum = 0;
 	for (NeuronID i = 0 ; i < get_nonzero() ; ++i) {
-		sum += coldata[i];
+		sum += elementdata[i];
 	}
 	return sum/get_nonzero();
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_set_all(NeuronID x, T value)
+void ComplexMatrix<T>::state_set_all(AurynWeight * x, T value)
 {
-	T * sx = get_state_begin(x);
-	for (T * iter=get_state_begin(sx);
-			 iter!=get_state_end(sx);
+	for (T * iter=x;
+			 iter!=x+get_nonzero();
 			 ++iter ) {
 		*iter = value;
 	}
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_saxpy(T a, NeuronID x, NeuronID y)
+void ComplexMatrix<T>::state_saxpy(T a, AurynWeight * x, AurynWeight * y)
 {
-	T * sx = get_state_begin(x);
-	T * sy = get_state_begin(y);
-	for (AurynLong i = 0 ; i < get_datasize() ; ++i ) {
-		sy[i] = a*sx[i]+sy[i];
+	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
+		y[i] = a*x[i]+y[i];
 	}
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_mul(NeuronID x, NeuronID y)
+void ComplexMatrix<T>::state_mul(AurynWeight * x, AurynWeight * y)
 {
-	T * sx = get_state_begin(x);
-	T * sy = get_state_begin(y);
-	for (AurynLong i = 0 ; i < get_datasize() ; ++i ) {
-		sy[i] = sx[i]*sy[i];
+	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
+		y[i] = x[i]*y[i];
 	}
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_scale(T a, NeuronID y)
+void ComplexMatrix<T>::state_add(AurynWeight * x, AurynWeight * y)
 {
-	T * sy = get_state_begin(y);
-	for (AurynLong i = 0 ; i < get_datasize() ; ++i ) {
-		sy[i] = a*sy[i];
+	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
+		y[i] = x[i]+y[i];
 	}
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_add_const(T a, NeuronID y)
+void ComplexMatrix<T>::state_sub(AurynWeight * x, AurynWeight * y, AurynWeight * res)
 {
-	T * sy = get_state_begin(y);
-	for (AurynLong i = 0 ; i < get_datasize() ; ++i ) {
-		sy[i] = a+sy[i];
+	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
+		res[i] = x[i]-y[i];
+	}
+}
+
+template <typename T>
+void ComplexMatrix<T>::state_sub(AurynWeight * x, AurynWeight * y)
+{
+	state_sub(x,y,y);
+}
+
+template <typename T>
+void ComplexMatrix<T>::state_scale(T a, AurynWeight * y)
+{
+	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
+		y[i] = a*y[i];
+	}
+}
+
+template <typename T>
+void ComplexMatrix<T>::state_add_const(T a, AurynWeight * y)
+{
+	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
+		y[i] = a+y[i];
 	}
 }
 
