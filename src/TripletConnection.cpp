@@ -137,22 +137,27 @@ AurynWeight TripletConnection::get_hom(NeuronID i)
 
 /*! This function implements what happens to synapes transmitting a 
  *  spike to neuron 'post'. */
-AurynWeight TripletConnection::dw_pre(NeuronID post)
+void TripletConnection::dw_pre(NeuronID post, AurynWeight * weight)
 {
 	// translate post id to local id on rank: translated_spike
 	NeuronID translated_spike = dst->global2rank(post); 
 	AurynDouble dw = -hom_fudge*(tr_post->get(translated_spike)*get_hom(translated_spike));
-	return dw;
+	*weight += dw;
+	// clips too small weights
+	if ( *weight < get_min_weight() ) 
+		*weight = get_min_weight();
 }
 
 /*! This function implements what happens to synapes experiencing a 
  *  backpropagating action potential from neuron 'pre'. */
-AurynWeight TripletConnection::dw_post(NeuronID pre, NeuronID post)
+void TripletConnection::dw_post(NeuronID pre, NeuronID post, AurynWeight * weight)
 {
 	// at this point post was already translated to a local id in 
 	// the propagate_backward function below.
 	AurynDouble dw = A3_plus*tr_pre->get(pre)*tr_post2->get(post);
-	return dw;
+	*weight += dw;
+	// clips too large weights
+	if (*weight>get_max_weight()) *weight=get_max_weight();
 }
 
 
@@ -173,11 +178,8 @@ void TripletConnection::propagate_forward()
 			// handle plasticity
 			if ( stdp_active ) {
 				// performs weight update
-			    *weight += dw_pre(*c);
+				dw_pre(*c,weight);
 
-			    // clips too small weights
-			    if ( *weight < get_min_weight() ) 
-					*weight = get_min_weight();
 			}
 		}
 	}
@@ -205,10 +207,8 @@ void TripletConnection::propagate_backward()
 
 				// computes plasticity update
 				AurynWeight * weight = bkw->get_data(c); 
-				*weight += dw_post(*c,translated_spike);
+				dw_post(*c,translated_spike,weight);
 
-				// clips too large weights
-				if (*weight>get_max_weight()) *weight=get_max_weight();
 			}
 		}
 	}
