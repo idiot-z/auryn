@@ -30,7 +30,7 @@
 #define ZYNAPSECONNECTION_H_
 
 #include "auryn_definitions.h"
-#include "LPTripletConnection.h"
+#include "TripletConnection.h"
 
 // TODO compare with Poisson f.ex.
 
@@ -66,7 +66,7 @@ using namespace std;
 
 /*! \brief Implements complex synapse as described by Ziegler et al. 2015.
  */
-class ZynapseConnection : public LPTripletConnection
+class ZynapseConnection : public TripletConnection
 {
 private:
 
@@ -76,7 +76,7 @@ private:
         int t_updates;
 
 	void init(AurynFloat w_o, AurynFloat a_m, AurynFloat a_p,
-		  AurynFloat k_w, AurynFloat tau_hom, AurynFloat kappa);
+		  AurynFloat k_w);
 
         // TODO check in Poisson f.ex.
         static boost::mt19937 gen;
@@ -99,7 +99,7 @@ protected:
          * @param post the postsynaptic cell from which the synaptic trace is read out*/
         // TODO x,i ?
 	// TODO if not rewrite propagate -> make it virtual
-        void dw_pre(AurynWeight *x, NeuronID i, NeuronID post);
+        virtual void dw_pre(AurynWeight *x, NeuronID i, NeuronID post);
 
         /*! Action on weight upon postsynaptic spike of cell post on connection
          * with presynaptic partner pre. This function should be modified to define
@@ -109,7 +109,7 @@ protected:
          */
         // TODO i ?
 	// TODO if not rewrite propagate -> make it virtual
-        void dw_post(NeuronID i, NeuronID pre, NeuronID post);
+        virtual void dw_post(NeuronID i, NeuronID pre, NeuronID post);
 
         void integrate();
         void noise(NeuronID z);
@@ -118,30 +118,35 @@ protected:
         // void compute_diffs(NeuronID z);
         // void compute_diffs();
 
-        AurynWeight xtow(AurynWeight value);
+        // AurynWeight xtow(AurynWeight value);
 
 public:
 
-	// TODO see whats really needed + add a default
         ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-			  AurynFloat w_o, TransmitterType transmitter);
+			  TransmitterType transmitter);
         ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
 			  AurynFloat w_o, AurynFloat sparseness, TransmitterType transmitter);
+	/*! Default constructor. Sets up a random sparse connection and plasticity parameters
+	 *
+	 * @param source the presynaptic neurons.
+	 * @param destinatino the postsynaptic neurons.
+	 * @param w_o the initial low synaptic weight.
+	 * @param sparseness the sparseness of the connection (probability of connection).
+	 * @param a_m the depression learning rate.
+	 * @param a_p the potentiation learning rate.
+	 * @param kw the relative high weight.
+	 * @param transmitter the TransmitterType (default is GLUT, glutamatergic).
+	 * @param name a sensible identifier for the connection used in debug output.
+	 */
         ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
 			  AurynFloat w_o, AurynFloat sparseness,
-			  AurynFloat tau_hom, AurynFloat kappa, TransmitterType transmitter,
+			  AurynFloat a_m, AurynFloat a_p,AurynFloat kw=KW,
+			  TransmitterType transmitter=GLUT,
 			  string name = "ZynapseConnection");
         ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-			  AurynFloat w_o, AurynFloat sparseness,
-			  AurynFloat a_m, AurynFloat a_mm, AurynFloat a_p, AurynFloat a_pp,
-			  AurynFloat tau_hom, AurynFloat kappa, TransmitterType transmitter,
-			  AurynFloat kw=KW, string name = "ZynapseConnection");
-        ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-			  const char * filename, AurynFloat w_o, TransmitterType transmitter);
-        ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-			  const char * filename, AurynFloat w_o, AurynFloat a_m, AurynFloat a_mm,
-			  AurynFloat a_p, AurynFloat a_pp, AurynFloat tau_hom, AurynFloat kappa,
-			  TransmitterType transmitter, AurynFloat kw=KW);
+			  const char * filename, AurynFloat w_o, AurynFloat a_m,
+			  AurynFloat a_p, AurynFloat kw=KW,
+			  TransmitterType transmitter=GLUT);
 
         virtual ~ZynapseConnection();
 

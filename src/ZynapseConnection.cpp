@@ -30,32 +30,36 @@
 boost::mt19937 ZynapseConnection::gen = boost::mt19937();
 bool ZynapseConnection::has_been_seeded = false;
 
-/****************
- *** creators ***
- ****************/
+/********************
+ *** constructors ***
+ ********************/
 
 // nada
 ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-                                     AurynFloat w_o, TransmitterType transmitter)
-        : LPTripletConnection(source, destination, transmitter)
+                                     TransmitterType transmitter)
+        : TripletConnection(source, destination, transmitter)
 
 {
-        init(w_o, AM, AP, KW, TAU_HOM, KAPPA);
+	// TODO default w_0
+        init(1, AM, AP, KW);
 }
 
 // sparseness
-ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination, AurynFloat w_o, AurynFloat sparseness, TransmitterType transmitter)
-        : LPTripletConnection(source, destination, w_o, sparseness, transmitter)
+ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
+				     AurynFloat w_o, AurynFloat sparseness,
+				     TransmitterType transmitter)
+        : TripletConnection(source, destination, w_o, sparseness, 0, 1, 1, 1, transmitter)
 
 {
-        init(w_o, KW, TAU_HOM, KAPPA, A2M, A3M, A2P, A3P);
+        init(w_o, KW, AM, AP);
+	// HERE continue with constructors & alloc_vectors ?
         alloc_vectors();
         init_shortcuts();
 }
 
 // sparseness, homeostasis
 ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination, AurynFloat w_o, AurynFloat sparseness, AurynFloat tau_hom, AurynFloat kappa, TransmitterType transmitter, string name)
-        : LPTripletConnection(source, destination, w_o, sparseness, transmitter, name)
+        : TripletConnection(source, destination, w_o, sparseness, transmitter, name)
 
 {
         init(w_o, KW, tau_hom, kappa, A2M, A3M, A2P, A3P);
@@ -65,7 +69,7 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destinat
 
 // sparseness, plasticity, homeostasis
 ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination, AurynFloat w_o, AurynFloat sparseness, AurynFloat a_m, AurynFloat a_mm, AurynFloat a_p, AurynFloat a_pp, AurynFloat tau_hom, AurynFloat kappa, TransmitterType transmitter, AurynFloat kw, string name)
-        : LPTripletConnection(source, destination, w_o, sparseness, transmitter, name)
+        : TripletConnection(source, destination, w_o, sparseness, transmitter, name)
 
 {
         init(w_o, kw, tau_hom, kappa, a_m, a_mm, a_p, a_pp);
@@ -75,7 +79,7 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destinat
 
 // filename
 ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination, const char *filename, AurynFloat w_o, TransmitterType transmitter)
-        : LPTripletConnection(source, destination, transmitter)
+        : TripletConnection(source, destination, transmitter)
 {
         init(w_o, KW, TAU_HOM, KAPPA, A2M, A3M, A2P, A3P);
         if (! load_from_file(filename) )
@@ -84,7 +88,7 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destinat
 
 // filename, plasticity, homeostasis
 ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination, const char *filename, AurynFloat w_o, AurynFloat a_m, AurynFloat a_mm, AurynFloat a_p, AurynFloat a_pp, AurynFloat tau_hom, AurynFloat kappa, TransmitterType transmitter, AurynFloat kw)
-        : LPTripletConnection(source, destination, transmitter)
+        : TripletConnection(source, destination, transmitter)
 {
         init(w_o, kw, tau_hom, kappa, a_m, a_mm, a_p, a_pp);
         if (! load_from_file(filename) )
