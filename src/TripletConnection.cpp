@@ -131,6 +131,11 @@ void TripletConnection::set_hom_trace(AurynFloat freq)
                 tr_post_hom->set_all(freq*tr_post_hom->get_tau());
 }
 
+void TripletConnection::set_a_minus(AurynFloat a_m)
+{
+	hom_fudge *= a_m/A3_plus;
+}
+
 
 AurynWeight TripletConnection::get_hom(NeuronID i)
 {
