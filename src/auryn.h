@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014 Friedemann Zenke
+* Copyright 2014-2015 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -93,6 +93,7 @@
 #include "AmpaMonitor.h"
 #include "VoltageMonitor.h"
 #include "SpikeMonitor.h"
+#include "BinarySpikeMonitor.h"
 #include "DelayedSpikeMonitor.h"
 #include "RealTimeMonitor.h"
 #include "RateMonitor.h"

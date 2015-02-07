@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014 Friedemann Zenke
+* Copyright 2014-2015 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -246,6 +246,12 @@ unsigned short auryn_vector_ushort_get (const auryn_vector_ushort * v, const Neu
 void auryn_vector_ushort_set (auryn_vector_ushort * v, const NeuronID i, unsigned short x);
 /*! Auryn vector gets pointer to designed element. */
 unsigned short * auryn_vector_ushort_ptr (const auryn_vector_ushort * v, const NeuronID i);
+/*! Auryn spike event for binary monitors */
+struct spikeEvent_type
+{
+    AurynTime time;
+    NeuronID neuronID;
+};
 
 // Exceptions
 class AurynOpenFileException: public exception

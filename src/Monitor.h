@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014 Friedemann Zenke
+* Copyright 2014-2015 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -49,6 +49,8 @@ protected:
 	string fname;
 	/*! Standard initializer to be called by the constructor */
 	void init(string filename);
+	/*! Opens a text outputfile -- for binary files redefine this function in derived class. */
+	virtual void open_output_file(string filename);
 	/*! Standard free function to be called by the destructor - closes the file stream. */
 	void free();
 	
