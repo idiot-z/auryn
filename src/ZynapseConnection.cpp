@@ -25,10 +25,7 @@
 
 #include "ZynapseConnection.h"
 
-// TODO check in Poisson f.ex.
-// static members
 boost::mt19937 ZynapseConnection::gen = boost::mt19937();
-bool ZynapseConnection::has_been_seeded = false;
 
 /********************
  *** constructors ***
@@ -92,7 +89,6 @@ void ZynapseConnection::free()
 {
         if (dst->get_post_size() == 0) return;
 
-	// TODO see Poisson
         delete dist;
         delete die;
 }
@@ -101,11 +97,10 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 {
         if (dst->get_post_size() == 0) return;
 
-	// TODO check with POISSON
         dist = new boost::normal_distribution<> (0., 1.);
-        die = new boost::variate_generator<boost::mt19937&, boost::normal_distribution<> > (gen, *dist);
-        if (!has_been_seeded)
-                seed(communicator->rank());
+        die = new boost::variate_generator<boost::mt19937&, boost::normal_distribution<> >
+		(gen, *dist);
+	seed(communicator->rank());
 
 	set_min_weight(wo);
 	set_max_weight(kw*wo);
@@ -274,7 +269,6 @@ void ZynapseConnection::random_data_potentiation(AurynFloat z_up, bool reset)
 //         }
 // }
 
-// TODO check in poisson
 // TODO check where is RANDOM_SEED + gettimeofday
 void ZynapseConnection::seed(int s)
 {
@@ -284,7 +278,6 @@ void ZynapseConnection::seed(int s)
         s += ss.tv_usec-100*(ss.tv_usec/100);
 #endif
         gen.seed(s);
-        has_been_seeded = true;
 }
 
 // TODO still exists?

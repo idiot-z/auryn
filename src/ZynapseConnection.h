@@ -32,10 +32,9 @@
 #include "auryn_definitions.h"
 #include "TripletConnection.h"
 
-// TODO compare with Poisson f.ex.
-
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
+#include <boost/random/exponential_distribution.hpp>
 #include <boost/random/variate_generator.hpp>
 
 /*! constants for the synapse model
@@ -83,9 +82,7 @@ private:
 	void init(AurynFloat wo, AurynFloat a_m, AurynFloat a_p,
 		  AurynFloat k_w);
 
-        // TODO check in Poisson f.ex.
         static boost::mt19937 gen;
-        static bool has_been_seeded;
         boost::normal_distribution<> *dist;
         boost::variate_generator<boost::mt19937&, boost::normal_distribution<> > * die;
 
@@ -150,7 +147,6 @@ public:
         void random_data_potentiation(AurynFloat z_up, bool reset=false);
         void count_states(AurynInt *states);
 
-	// TODO check in Poisson f.ex.
         void seed(int s);
 
         void set_plast_constants(AurynFloat a_m, AurynFloat a_p);
