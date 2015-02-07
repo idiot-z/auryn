@@ -61,6 +61,11 @@
  */
 #define AM 1e-3
 #define AP 1e-3
+#define TAU_PRE 0.0168
+#define TAU_POST 0.0337
+#define TAU_LONG 0.04
+#define PZ 2.
+#define CR 1.
 
 using namespace std;
 
@@ -70,12 +75,12 @@ class ZynapseConnection : public TripletConnection
 {
 private:
 
-	// TODO what is it
+	// TODO compare with LPT
         AurynFloat euler[3], eta;
 
         int t_updates;
 
-	void init(AurynFloat w_o, AurynFloat a_m, AurynFloat a_p,
+	void init(AurynFloat wo, AurynFloat a_m, AurynFloat a_p,
 		  AurynFloat k_w);
 
         // TODO check in Poisson f.ex.
@@ -84,22 +89,15 @@ private:
         boost::normal_distribution<> *dist;
         boost::variate_generator<boost::mt19937&, boost::normal_distribution<> > * die;
 
-        void finalize(); // TODO need it?
         void free();
 
 protected:
-
-	// TODO need to rewrite?
-	void propagate_forward();
-        void propagate_backward();
 
         /*! Action on weight upon presynaptic spike on connection with postsynaptic
          * partner post. This function should be modified to define new spike based
          * plasticity rules.
          * @param post the postsynaptic cell from which the synaptic trace is read out*/
-        // TODO x,i ?
-	// TODO if not rewrite propagate -> make it virtual
-        virtual void dw_pre(AurynWeight *x, NeuronID i, NeuronID post);
+        virtual void dw_pre(NeuronID * post, AurynWeight * weight);
 
         /*! Action on weight upon postsynaptic spike of cell post on connection
          * with presynaptic partner pre. This function should be modified to define
@@ -107,16 +105,12 @@ protected:
          * @param pre the presynaptic cell in question.
          * @param post the postsynaptic cell in question.
          */
-        // TODO i ?
-	// TODO if not rewrite propagate -> make it virtual
-        virtual void dw_post(NeuronID i, NeuronID pre, NeuronID post);
+        virtual void dw_post(NeuronID * pre, NeuronID post, AurynWeight * weight);
 
         void integrate();
+
         void noise(NeuronID z);
-	// TODO put in integrate ?
-        // void compute_diffs_loc(NeuronID i);
-        // void compute_diffs(NeuronID z);
-        // void compute_diffs();
+        void compute_diffs();
 
         // AurynWeight xtow(AurynWeight value);
 
@@ -125,26 +119,26 @@ public:
         ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
 			  TransmitterType transmitter);
         ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-			  AurynFloat w_o, AurynFloat sparseness, TransmitterType transmitter);
+			  AurynFloat wo, AurynFloat sparseness, TransmitterType transmitter);
 	/*! Default constructor. Sets up a random sparse connection and plasticity parameters
 	 *
 	 * @param source the presynaptic neurons.
 	 * @param destinatino the postsynaptic neurons.
-	 * @param w_o the initial low synaptic weight.
+	 * @param wo the initial synaptic weight and lower fixed point of weight dynamics.
 	 * @param sparseness the sparseness of the connection (probability of connection).
 	 * @param a_m the depression learning rate.
 	 * @param a_p the potentiation learning rate.
-	 * @param kw the relative high weight.
+	 * @param kw the relative high weight (default is 3).
 	 * @param transmitter the TransmitterType (default is GLUT, glutamatergic).
 	 * @param name a sensible identifier for the connection used in debug output.
 	 */
         ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-			  AurynFloat w_o, AurynFloat sparseness,
-			  AurynFloat a_m, AurynFloat a_p,AurynFloat kw=KW,
+			  AurynFloat wo, AurynFloat sparseness,
+			  AurynFloat a_m, AurynFloat a_p, AurynFloat kw=KW,
 			  TransmitterType transmitter=GLUT,
 			  string name = "ZynapseConnection");
         ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-			  const char * filename, AurynFloat w_o, AurynFloat a_m,
+			  const char * filename, AurynFloat wo, AurynFloat a_m,
 			  AurynFloat a_p, AurynFloat kw=KW,
 			  TransmitterType transmitter=GLUT);
 
@@ -159,34 +153,9 @@ public:
 	// TODO check in Poisson f.ex.
         void seed(int s);
 
-	// TODO see whats needed
-//         void set_plast_constants(AurynFloat a_m, AurynFloat a_pp,
-// 				 AurynFloat a_mm=0, AurynFloat a_p=0);
-//         float *get_layer_ptr(int z);
-//         /* NeuronID get_size(); */
-//         void set_noise(AurynFloat level);
-//         void set_tau(AurynInt z, AurynFloat level);
-//         /* void set_x(NeuronID i, AurynFloat level); */
-//         void set_x(AurynFloat level);
-//         void set_y(AurynFloat level);
-//         void set_z(AurynFloat level);
-//         void potentiate_bkw(NeuronID j);
-//         void potentiate_bkw_range(NeuronID n);
-//         void potentiate(NeuronID i);
-//         void potentiate();
-//         void stabilize(NeuronID i);
-//         void stabilize();
-//         void fall(NeuronID i);
-//         void fall();
-//         void decay(NeuronID i);
-//         void decay();
-//         void rebounce(NeuronID i);
-//         void rebounce();
-//         void tag(NeuronID i);
-//         void tag();
-//         void depress();
-//         AurynFloat get_g(NeuronID i);
-//         void set_g(AurynFloat value);
+        void set_plast_constants(AurynFloat a_m, AurynFloat a_p);
+        void potentiate(NeuronID i);
+        // void potentiate();
 //         virtual void stats(AurynFloat &mean, AurynFloat &std);
 //         void stats(AurynFloat &mean, AurynFloat &std, vector<NeuronID> * presynaptic_list);
 };
