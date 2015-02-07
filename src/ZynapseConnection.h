@@ -63,8 +63,7 @@
 #define TAU_PRE 0.0168
 #define TAU_POST 0.0337
 #define TAU_LONG 0.04
-#define PZ 2.
-#define CR 1.
+#define C_RESET 1.
 
 using namespace std;
 
@@ -76,7 +75,6 @@ private:
 
 	// TODO compare with LPT
         AurynFloat euler[3], eta;
-
         int t_updates;
 
 	void init(AurynFloat wo, AurynFloat a_m, AurynFloat a_p,
@@ -108,6 +106,9 @@ protected:
 
         void noise(NeuronID z);
         void compute_diffs();
+
+	// temporary state vector
+	AurynWeight * temp_state;
 
         // AurynWeight xtow(AurynWeight value);
 

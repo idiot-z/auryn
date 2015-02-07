@@ -91,6 +91,7 @@ void ZynapseConnection::free()
 
         delete dist;
         delete die;
+	delete [] temp_state;
 }
 
 void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, AurynFloat a_p)
@@ -111,7 +112,6 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 
         set_plast_constants(a_m, a_p);
 
-	// TODO see how done in LPTriplet
         euler[0] = TUPD/TAUX;
         euler[1] = TUPD/TAUYZ;
         euler[2] = TUPD/TAUYZ;
@@ -119,6 +119,10 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
         t_updates = TUPD/dt;
 
         eta = sqrt(ETAXYZ*TUPD);
+
+	/* Define temporary state vectors */
+	// TODO what size?
+	temp_state = new AurynWeight[w->get_statesize()];
 }
 
 void ZynapseConnection::set_plast_constants(AurynFloat a_m, AurynFloat a_p)
@@ -198,7 +202,7 @@ void ZynapseConnection::dw_pre(NeuronID * post, AurynWeight * weight)
 		data_ind = post-fwd_ind;
         AurynDouble dw = hom_fudge*tr_post->get(translated_spike),
                 reset = gsl_vector_float_get(layers[2],data_ind)-*x; // TODO
-        if (reset<0) dw *= 1-CR*reset;
+        if (reset<0) dw *= 1-C_RESET*reset;
         if (dw>1) dw = 1;
         if (reset>0) tr_gxy->add(data_ind, dw*(1.-tr_gxy->get(data_ind))); // TODO add trace
         dw *= (1+*weight); // TODO whats this
@@ -214,7 +218,7 @@ void ZynapseConnection::dw_post(NeuronID * pre, NeuronID post, AurynWeight * wei
 	NeuronID data_ind = bkw_data[pre-bkw_ind]-fwd_data;
         AurynDouble dw = A3_plus*tr_pre->get(*pre)*tr_post2->get(post),
                 reset = gsl_vector_float_get(layers[2],data_ind)-*x;
-        if (reset>0) dw *= 1+CR*reset;
+        if (reset>0) dw *= 1+C_RESET*reset;
         if (dw>1) dw = 1;
         if (reset<0) tr_gxy->add(data_ind,dw*(1.-tr_gxy->get(data_ind)));
         dw *= (1-*weight);
