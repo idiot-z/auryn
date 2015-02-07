@@ -148,10 +148,10 @@ AurynWeight TripletConnection::get_hom(NeuronID i)
 
 /*! This function implements what happens to synapes transmitting a
  *  spike to neuron 'post'. */
-void TripletConnection::dw_pre(NeuronID post, AurynWeight * weight)
+void TripletConnection::dw_pre(NeuronID * post, AurynWeight * weight)
 {
         // translate post id to local id on rank: translated_spike
-        NeuronID translated_spike = dst->global2rank(post);
+        NeuronID translated_spike = dst->global2rank(*post);
         AurynDouble dw = -hom_fudge*(tr_post->get(translated_spike)*get_hom(translated_spike));
         *weight += dw;
         // clips too small weights
@@ -161,11 +161,11 @@ void TripletConnection::dw_pre(NeuronID post, AurynWeight * weight)
 
 /*! This function implements what happens to synapes experiencing a
  *  backpropagating action potential from neuron 'pre'. */
-void TripletConnection::dw_post(NeuronID pre, NeuronID post, AurynWeight * weight)
+void TripletConnection::dw_post(NeuronID * pre, NeuronID post, AurynWeight * weight)
 {
         // at this point post was already translated to a local id in
         // the propagate_backward function below.
-        AurynDouble dw = A3_plus*tr_pre->get(pre)*tr_post2->get(post);
+        AurynDouble dw = A3_plus*tr_pre->get(*pre)*tr_post2->get(post);
         *weight += dw;
         // clips too large weights
         if (*weight>get_max_weight()) *weight=get_max_weight();
@@ -189,7 +189,7 @@ void TripletConnection::propagate_forward()
                         // handle plasticity
                         if ( stdp_active ) {
                                 // performs weight update
-                                dw_pre(*c,weight);
+                                dw_pre(c,weight);
 
                         }
                 }
@@ -218,7 +218,7 @@ void TripletConnection::propagate_backward()
 
                                 // computes plasticity update
                                 AurynWeight * weight = bkw->get_data(c);
-                                dw_post(*c,translated_spike,weight);
+                                dw_post(c,translated_spike,weight);
 
                         }
                 }

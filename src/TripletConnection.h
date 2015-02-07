@@ -99,7 +99,7 @@ protected:
 	 * partner post. This function should be modified to define new spike based
 	 * plasticity rules. 
 	 * @param post the postsynaptic cell from which the synaptic trace is read out*/
-	virtual void dw_pre(NeuronID post, AurynWeight * weight);
+	virtual void dw_pre(NeuronID * post, AurynWeight * weight);
 
 	/*! Action on weight upon postsynaptic spike of cell post on connection
 	 * with presynaptic partner pre. This function should be modified to define
@@ -107,7 +107,7 @@ protected:
 	 * @param pre the presynaptic cell in question.
 	 * @param post the postsynaptic cell in question. 
 	 */ 
-	virtual void dw_post(NeuronID pre, NeuronID post, AurynWeight * weight);
+	virtual void dw_post(NeuronID * pre, NeuronID post, AurynWeight * weight);
 
 
 public:
