@@ -35,8 +35,14 @@ void System::init() {
 	stringstream oss;
 	oss.str("");
 	oss << "Auryn version "
-		<< VERSION 
-		<< " ( compiled " << __DATE__ << " " << __TIME__ << " )";
+		<< AURYNVERSION;
+
+	if ( AURYNSUBVERSION ) {
+		oss << "."
+		<< AURYNSUBVERSION;
+	}
+
+	oss << " ( compiled " << __DATE__ << " " << __TIME__ << " )";
 	logger->msg(oss.str(),NOTIFICATION);
 
 	oss.str("");
