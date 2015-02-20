@@ -47,8 +47,6 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destinat
 
 {
         init(wo, KW, AM, AP);
-	// TODO alloc_vectors ?
-        alloc_vectors();
 }
 
 ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
@@ -62,7 +60,6 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destinat
         init(wo, kw, a_m, a_p);
         if ( name.empty() )
                 set_name("ZynapseConnection");
-        alloc_vectors();
 }
 
 ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
@@ -72,7 +69,6 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destinat
         : TripletConnection(source, destination, filename, 0, 1, 1, 1, transmitter)
 {
         init(wo, kw, a_m, a_p);
-        alloc_vectors();
 }
 
 /*****************
@@ -87,11 +83,14 @@ ZynapseConnection::~ZynapseConnection()
 
 void ZynapseConnection::free()
 {
-        if (dst->get_post_size() == 0) return;
-
         delete dist;
         delete die;
 	delete [] temp_state;
+}
+
+void ZynapseConnection::finalize() {
+	// will compute backward matrix on the new elements/data vector of the w
+	DuplexConnection::finalize();
 }
 
 void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, AurynFloat a_p)
@@ -116,13 +115,27 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
         euler[1] = TUPD/TAUYZ;
         euler[2] = TUPD/TAUYZ;
 
-        t_updates = TUPD/dt;
+        timestep_synapses = TUPD/dt;
 
         eta = sqrt(ETAXYZ*TUPD);
+
+	// TODO write a Connection:fct to do all this automatically?
+	// Set number of synaptic states
+	w->set_num_synapse_states(3);
+
+	// copy all the elements from z=0 to z=1,2
+	w->state_set_all(w->get_state_begin(1),0.0);
+	w->state_set_all(w->get_state_begin(2),0.0);
+	w->state_add(w->get_state_begin(0),w->get_state_begin(1));
+	w->state_add(w->get_state_begin(0),w->get_state_begin(2));
 
 	/* Define temporary state vectors */
 	// TODO what size?
 	temp_state = new AurynWeight[w->get_statesize()];
+	diff_state = new AurynWeight[2*w->get_statesize()];
+
+	// Run finalize again to rebuild backward matrix
+	finalize(); 
 }
 
 void ZynapseConnection::set_plast_constants(AurynFloat a_m, AurynFloat a_p)
@@ -138,6 +151,7 @@ void ZynapseConnection::set_plast_constants(AurynFloat a_m, AurynFloat a_p)
 // TODO rewrite with new dynamics
 void ZynapseConnection::integrate()
 {
+        compute_diffs();
         for (int z=0; z!=3; z++) {
                 gsl_vector_float *x = layers[z];
 
@@ -171,24 +185,28 @@ void ZynapseConnection::integrate()
                 noise(z);
         }
         // diffs and couplings
-        compute_diffs();
+	// TODO add proteins to neurongroup
         dst->update_prot();
 }
 
-// TODO adapt
 void ZynapseConnection::noise(NeuronID z)
 {
-        float *data_begin = layers[z]->data;
-        for (float *dat=data_begin;
-             dat<(data_begin+get_nonzero()); dat++)
+        AurynWeight *data_begin = w->get_data_begin(z);
+        for (AurynWeight *dat=data_begin;
+             dat!=(data_begin+w->get_statesize()); dat++)
                 *dat += eta*(*die)();
 }
 
-// TODO adapt + do it for z=0 and 1
+// TODO difference statesize nonzero ?
 void ZynapseConnection::compute_diffs()
 {
-        gsl_blas_scopy(layers[z], diffs[z]);
-        auryn_vector_float_sub(diffs[z], layers[z+1]);
+	AurynWeight * x = w->get_state_begin(0),
+		* y = w->get_state_begin(1),
+		* z = w->get_state_begin(2),
+		* dxy = diff_state,
+		* dyz = diff_state+w->get_statesize();
+	w->state_sub(x,y,dxy);
+	w->state_sub(y,z,dyz);
 }
 
 // TODO adapt (careful with constants due to w instead of x)
@@ -225,11 +243,9 @@ void ZynapseConnection::dw_post(NeuronID * pre, NeuronID post, AurynWeight * wei
         *weight += dw;
 }
 
-// TODO compare with LPT
 void ZynapseConnection::evolve()
 {
-        AurynTime current = sys->get_clock();
-        if (current%t_updates==0)
+        if (sys->get_clock()%timestep_synapses==0)
                 integrate();
 }
 

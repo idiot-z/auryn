@@ -75,7 +75,7 @@ private:
 
 	// TODO compare with LPT
         AurynFloat euler[3], eta;
-        int t_updates;
+        int timestep_synapses;
 
 	void init(AurynFloat wo, AurynFloat a_m, AurynFloat a_p,
 		  AurynFloat k_w);
@@ -85,6 +85,7 @@ private:
         boost::variate_generator<boost::mt19937&, boost::normal_distribution<> > * die;
 
         void free();
+	virtual void finalize();
 
 protected:
 
