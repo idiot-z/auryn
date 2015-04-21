@@ -119,10 +119,10 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 
         eta = sqrt(ETAXYZ*TUPD);
 
-	// TODO write a Connection:fct to do all this automatically?
 	// Set number of synaptic states
 	w->set_num_synapse_states(3);
 
+	// TODO put in w->set_num_states() ?
 	// copy all the elements from z=0 to z=1,2
 	w->state_set_all(w->get_state_begin(1),0.0);
 	w->state_set_all(w->get_state_begin(2),0.0);
@@ -131,8 +131,8 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 
 	/* Define temporary state vectors */
 	// TODO what size?
-	temp_state = new AurynWeight[w->get_statesize()];
-	diff_state = new AurynWeight[2*w->get_statesize()];
+	temp_state = new AurynWeight[w->get_nonzero()];
+	diff_state = new AurynWeight[2*w->get_nonzero()];
 
 	// Run finalize again to rebuild backward matrix
 	finalize(); 
@@ -193,18 +193,17 @@ void ZynapseConnection::noise(NeuronID z)
 {
         AurynWeight *data_begin = w->get_data_begin(z);
         for (AurynWeight *dat=data_begin;
-             dat!=(data_begin+w->get_statesize()); dat++)
+             dat!=(data_begin+w->get_nonzero()); dat++)
                 *dat += eta*(*die)();
 }
 
-// TODO difference statesize nonzero ?
 void ZynapseConnection::compute_diffs()
 {
 	AurynWeight * x = w->get_state_begin(0),
 		* y = w->get_state_begin(1),
 		* z = w->get_state_begin(2),
 		* dxy = diff_state,
-		* dyz = diff_state+w->get_statesize();
+		* dyz = diff_state+w->get_nonzero();
 	w->state_sub(x,y,dxy);
 	w->state_sub(y,z,dyz);
 }

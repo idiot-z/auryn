@@ -73,7 +73,6 @@ class ZynapseConnection : public TripletConnection
 {
 private:
 
-	// TODO compare with LPT
         AurynFloat euler[3], eta;
         int timestep_synapses;
 
