@@ -1,17 +1,20 @@
-All files created by Friedemann Zenke
+Auryn package created by Friedemann Zenke <fzenke@stanford.edu>
 
-Patches Lorric Ziegler -- PoissonGroup.cpp
-
-
-
-
-
+Contributors: 
+Lorric Ziegler <lorric.ziegler@epfl.ch>
+Ankur Sinha <a.sinha2@herts.ac.uk>
+Emre Neftci <nemre@ucsd.edu>
 
 
 
 
 
 
-Copyright 2014 Friedemann Zenke.
+
+
+
+
+
+Copyright 2014-2015 Friedemann Zenke.
 Copying and distribution of this file, with or without modification, are
 permitted provided the copyright notice and this notice are preserved.

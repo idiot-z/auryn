@@ -174,7 +174,7 @@ void TripletConnection::dw_post(NeuronID * pre, NeuronID post, AurynWeight * wei
 
 void TripletConnection::propagate_forward()
 {
-        // loop over all spikes
+        // loop over all spikes (yields presynaptic cell ids of cells that spiked)
         for (SpikeContainer::const_iterator spike = src->get_spikes()->begin() ; // spike = pre_spike
              spike != src->get_spikes()->end() ; ++spike ) {
                 // loop over all postsynaptic partners
@@ -182,13 +182,14 @@ void TripletConnection::propagate_forward()
                      c != w->get_row_end(*spike) ;
                      ++c ) { // c = post index
 
-                        // transmit signal to target at postsynaptic neuron
+			// determines the weight of connection
                         AurynWeight * weight = w->get_data_ptr(c);
+			// evokes the postsynaptic response 
                         transmit( *c , *weight );
 
                         // handle plasticity
                         if ( stdp_active ) {
-                                // performs weight update
+                                // performs weight update upon presynaptic spike
                                 dw_pre(c,weight);
 
                         }
