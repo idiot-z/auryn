@@ -45,12 +45,12 @@ void TripletConnection::init(AurynFloat tau_hom, AurynFloat eta, AurynFloat kapp
         /* Initialization of postsynaptic traces */
         tr_post = dst->get_post_trace(tau_minus);
         tr_post2 = dst->get_post_trace(tau_long);
-	if (tau_hom > 0) {
-		tr_post_hom = dst->get_post_trace(tau_hom);
-		hom_fudge = A3_plus*tau_plus*tau_long/tau_minus/kappa/tau_hom/tau_hom;
-	} else {
-		hom_fudge = A3_plus*tau_plus*tau_long/tau_minus;
-	}
+        if (tau_hom > 0) {
+                tr_post_hom = dst->get_post_trace(tau_hom);
+                hom_fudge = A3_plus*tau_plus*tau_long/tau_minus/kappa/tau_hom/tau_hom;
+        } else {
+                hom_fudge = A3_plus*tau_plus*tau_long/tau_minus;
+        }
 
         /* Set min/max weight values. */
         set_min_weight(0.0);
@@ -133,16 +133,16 @@ void TripletConnection::set_hom_trace(AurynFloat freq)
 
 void TripletConnection::set_a_minus(AurynFloat a_m)
 {
-	hom_fudge *= a_m/A3_plus;
+        hom_fudge *= a_m/A3_plus;
 }
 
 
 AurynWeight TripletConnection::get_hom(NeuronID i)
 {
-	if (tau_homeostatic > 0)
-		return pow(tr_post_hom->get(i),2);
-	else
-		return 1;
+        if (tau_homeostatic > 0)
+                return pow(tr_post_hom->get(i),2);
+        else
+                return 1;
 }
 
 
@@ -182,9 +182,9 @@ void TripletConnection::propagate_forward()
                      c != w->get_row_end(*spike) ;
                      ++c ) { // c = post index
 
-			// determines the weight of connection
+                        // determines the weight of connection
                         AurynWeight * weight = w->get_data_ptr(c);
-			// evokes the postsynaptic response 
+                        // evokes the postsynaptic response
                         transmit( *c , *weight );
 
                         // handle plasticity

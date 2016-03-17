@@ -41,8 +41,6 @@ void VoltageMonitor::init(NeuronGroup * source, NeuronID id, string filename, Au
 	ssize = stepsize;
 	if ( ssize < 1 ) ssize = 1;
 
-	if ( ssize < 1 ) ssize = 1;
-
 	nid = id;
 	gid = src->rank2global(nid);
 	paste_spikes = true;
@@ -58,12 +56,32 @@ void VoltageMonitor::init(NeuronGroup * source, NeuronID id, string filename, Au
 
 void VoltageMonitor::propagate()
 {
-	if (active && (sys->get_clock())%ssize==0 && sys->get_clock() < tStop && nid < src->get_size() ) {
-		if ( paste_spikes && 
-				std::find(src->get_spikes_immediate()->begin(), 
-					      src->get_spikes_immediate()->end(), gid)!=src->get_spikes_immediate()->end() ) 
-			outfile << (sys->get_time()) << " " << VOLTAGEMONITOR_PASTED_SPIKE_HEIGHT << "\n";
-		else
-			outfile << (sys->get_time()) << " " << src->get_mem(nid) << "\n";
+	if ( sys->get_clock() < tStop && (sys->get_clock())%ssize==0 ) {
+		double voltage = src->get_mem(nid);
+		if ( paste_spikes ) {
+			SpikeContainer * spikes = src->get_spikes_immediate();
+			for ( int i = 0 ; i < spikes->size() ; ++i ) {
+				if ( spikes->at(i) == gid ) {
+					voltage = VOLTAGEMONITOR_PASTED_SPIKE_HEIGHT;
+					break;
+				}
+			}
+		}
+		outfile << (sys->get_time()) << " " << voltage << "\n";
 	}
+}
+
+
+
+void VoltageMonitor::record_for(AurynDouble time)
+{
+	set_stop_time(time);
+}
+
+void VoltageMonitor::set_stop_time(AurynDouble time)
+{
+	if (time < 0) {
+		logger->msg("Warning: Negative stop times not supported -- ingoring.",WARNING);
+	} 
+	else tStop = sys->get_clock() + time/dt;
 }
