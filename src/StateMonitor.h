@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -33,7 +33,7 @@
 #include <fstream>
 #include <iomanip>
 
-using namespace std;
+namespace auryn {
 
 /*! \brief Records from an arbitray state vector of one unit from the source SpikingGroup to a file.*/
 class StateMonitor : protected Monitor
@@ -65,11 +65,18 @@ public:
 	StateMonitor(SpikingGroup * source, NeuronID id, string statename, string filename, AurynDouble sampling_interval=dt);
 
 	/*! Alternative constructor
-	 * \param state The soure state vector
+	 * \param state The source state vector
 	 * \param filename The filename of the file to dump the output to
 	 * \param sampling_interval The sampling interval in seconds
 	 */
 	StateMonitor(auryn_vector_float * state, NeuronID id, string filename, AurynDouble sampling_interval=dt);
+
+	/*! EulerTrace constructor
+	 * \param trace The source synaptic trace
+	 * \param filename The filename of the file to dump the output to
+	 * \param sampling_interval The sampling interval in seconds
+	 */
+	StateMonitor(EulerTrace * trace, NeuronID id, string filename, AurynDouble sampling_interval=dt);
 
 	/*! \brief Sets relative time at which to stop recording 
 	 *
@@ -85,5 +92,7 @@ public:
 	virtual ~StateMonitor();
 	void propagate();
 };
+
+}
 
 #endif /*STATEMONITOR_H_*/

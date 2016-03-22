@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -33,7 +33,7 @@
 #include <fstream>
 #include <iomanip>
 
-using namespace std;
+namespace auryn {
 
 /*! \brief Records mean and standard deviation of a weight matrix in predefined
  *         intervals.
@@ -51,5 +51,7 @@ public:
 	virtual ~WeightStatsMonitor();
 	void propagate();
 };
+
+}
 
 #endif /*WEIGHTSTATSMONITOR_H_*/

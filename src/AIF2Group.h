@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -31,6 +31,10 @@
 #include "System.h"
 
 
+namespace auryn {
+
+/*! \brief An adaptive integrate and fire group comparable to AIFGroup but with two independent adaptation timescales
+ */
 class AIF2Group : public AIFGroup
 {
 private:
@@ -58,6 +62,8 @@ public:
 	void clear();
 	virtual void evolve();
 };
+
+}
 
 #endif /*AIF2GROUP_H_*/
 

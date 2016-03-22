@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -25,6 +25,8 @@
 
 #include "SyncBuffer.h"
 
+using namespace auryn;
+
 SyncBuffer::SyncBuffer( mpi::communicator * com )
 {
 	mpicom = com;
@@ -33,10 +35,6 @@ SyncBuffer::SyncBuffer( mpi::communicator * com )
 
 void SyncBuffer::init()
 {
-	// for ( NeuronID i = 0 ; i < SYNCBUFFER_SIZE_HIST_LEN ; ++i )
-	// 	size_history[i] = 0;
-	// size_history_ptr = 0;
-	
 
 	for ( NeuronID i = 0 ; i < mpicom->size() ; ++i )
 		pop_offsets.push_back(1);
@@ -65,7 +63,7 @@ void SyncBuffer::init()
 
 void SyncBuffer::push(SpikeDelay * delay, NeuronID size)
 {
-
+	// loop over circular different delay bins
 	for (NeuronID i = 1 ; i < MINDELAY+1 ; ++i ) {
 		SpikeContainer * sc = delay->get_spikes(i);
 
@@ -74,7 +72,8 @@ void SyncBuffer::push(SpikeDelay * delay, NeuronID size)
 
 		count[i-1] = 0;
 		for (SpikeContainer::const_iterator spike = sc->begin() ; 
-			spike != sc->end() ; ++spike ) {
+			spike != sc->end() ; 
+			++spike ) {
 			NeuronID compressed = *spike + groupPushOffset1 + (i-1)*size;
 			send_buf.push_back(compressed);
 			count[i-1]++;
@@ -90,9 +89,12 @@ void SyncBuffer::push(SpikeDelay * delay, NeuronID size)
 			for ( NeuronID k = 0 ; k < delay->get_num_attributes() ; ++k ) { // loop over attributes
 				for ( NeuronID s = 0 ; s < count[i-1] ; ++s ) { // loop over spikes
 					send_buf.push_back(*(NeuronID*)(&(ac->at(s+count[i-1]*k))));
-					// if ( mpicom->rank() == 0 )
-					// 	cout << " pushing attr " << " " << i << " " << k << " " << s << " " 
-					// 		<< scientific << ac->at(s+count[i-1]*k) << endl;
+// #ifdef DEBUG
+// 					if ( mpicom->rank() == 0 )
+// 						std::cout << " pushing attr " 
+// 							<< i << " " << k << " " << s << " " 
+// 							<< ac->at(s+count[i-1]*k) << std::endl;
+// #endif // DEBUG
 				}
 			}
 		}
@@ -105,7 +107,7 @@ void SyncBuffer::pop(SpikeDelay * delay, NeuronID size)
 {
 	for (NeuronID i = 1 ; i < MINDELAY+1 ; ++i ) {
 		delay->get_spikes(i)->clear();
-		delay->get_spikes(i)->clear();
+		delay->get_attributes(i)->clear();
 	}
 
 
@@ -142,8 +144,13 @@ void SyncBuffer::pop(SpikeDelay * delay, NeuronID size)
 						attrib = (AurynFloat*)(iter);
 						iter++;
 						ac->push_back(*attrib);
-						// if ( mpicom->rank() == 0 )
-						// 	cout << " reading attr " << " " << slice << " "  << k << " " << s << " " << scientific << *attrib << endl;
+// #ifdef DEBUG
+// 						if ( mpicom->rank() == 0 )
+// 							std::cout << " reading attr " 
+// 								<< " " << slice << " "  
+// 								<< k << " " << s << std::setprecision(5)
+// 								<< " "  << *attrib << std::endl;
+// #endif // DEBUG
 					}
 				}
 			}
@@ -155,19 +162,35 @@ void SyncBuffer::pop(SpikeDelay * delay, NeuronID size)
 
 	groupPopOffset += size*MINDELAY;
 
+#ifdef DEBUG
+	if ( mpicom->rank() == 0 ) {
+		for ( NeuronID slice = 0 ; slice < MINDELAY ; ++slice ) {
+			if ( delay->get_attributes(slice+1)->size() != delay->get_num_attributes()*delay->get_spikes(slice+1)->size() ) {
+				std::cout << "   " << delay->get_spikes(slice+1)->size() << " spikes extracted in time slice " << slice+1 << std::endl
+					<< "   " << delay->get_attributes(slice+1)->size() << " attributes extracted in time slice " << slice+1
+					<< std::endl;
+			}
+		}
+	}
+#endif // DEBUG
 }
 
 
 void SyncBuffer::sync() 
 {
 	if ( syncCount >= SYNCBUFFER_SIZE_HIST_LEN ) {  // update the estimate of maximum send size
-		NeuronID mean_send_size =  maxSendSum/syncCount; // allow for 5 times the max mean
+		NeuronID mean_send_size =  maxSendSum/syncCount; 
 		NeuronID var_send_size  =  (maxSendSum2-mean_send_size*mean_send_size)/syncCount;
 		NeuronID upper_estimate =  mean_send_size+SYNCBUFFER_SIZE_MARGIN_MULTIPLIER*sqrt(var_send_size);
 
 		if ( max_send_size > upper_estimate && max_send_size > 2 ) { 
 			max_send_size = (max_send_size+upper_estimate)/2;
 			recv_buf.resize(mpicom->size()*max_send_size);
+#ifdef DEBUG
+			std::cerr << "Reducing maximum send buffer size to "
+				<< max_send_size
+				<< std::endl;
+#endif //DEBUG
 		}	
 		maxSendSum = 0;
 		maxSendSum2 = 0;
@@ -198,7 +221,7 @@ void SyncBuffer::sync()
 	deltaT += (T2-T1);
 #endif
 
-	/* Detect over flow */
+	/* Detect overflow */
 	bool overflow = false;
 	NeuronID new_send_size = 0;
 	for (int r = 0 ; r < mpicom->size() ; ++r ) {
@@ -213,15 +236,17 @@ void SyncBuffer::sync()
 
 
 	if ( overflow ) {
-		// cout << "Overflow in SyncBuffer adapting buffersize to "
-		// 	<< (new_send_size+1)*sizeof(NeuronID)
-		// 	<< " ( "
-		// 	<< mpicom->size()*(new_send_size+1)*sizeof(NeuronID)
-		// 	<< " total ) " 
-		// 	<< endl;
+#ifdef DEBUG
+		std::cerr << "Overflow in SyncBuffer adapting buffersize to "
+			<< (new_send_size+1)*sizeof(NeuronID)
+			<< " ( "
+			<< mpicom->size()*(new_send_size+1)*sizeof(NeuronID)
+			<< " total ) " 
+			<< std::endl;
+#endif //DEBUG
 		max_send_size = new_send_size+1;
 		recv_buf.resize(mpicom->size()*max_send_size);
-		// sync(); // recursive retry was ausing problems
+		// sync(); // recursive retry was causing problems
 		// resend full buffer
 		ierr = MPI_Allgather(send_buf.data(), send_buf.size(), MPI_UNSIGNED, 
 				recv_buf.data(), max_send_size, MPI_UNSIGNED, *mpicom);
@@ -229,10 +254,10 @@ void SyncBuffer::sync()
 
 	// reset
 	NeuronID largest_message = 0;
-	for (vector<NeuronID>::iterator iter = pop_offsets.begin() ;
+	for (std::vector<NeuronID>::iterator iter = pop_offsets.begin() ;
 			iter != pop_offsets.end() ;
 			++iter ) {
-		largest_message = max(*iter,largest_message);
+		largest_message = std::max(*iter,largest_message);
 		*iter = 1;
 	}
 	maxSendSum += largest_message;
@@ -250,6 +275,11 @@ void SyncBuffer::reset_send_buffer()
 	send_buf.push_back(0); // initial size first entry
 	groupPushOffset1 = 0;
 	groupPopOffset = 0;
+}
+
+int SyncBuffer::get_max_send_buffer_size()
+{
+	return max_send_size;
 }
 
 #ifdef CODE_COLLECT_SYNC_TIMING_STATS

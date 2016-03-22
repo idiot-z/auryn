@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -42,7 +42,7 @@
 #define SOFTSTARTTIME 0.1
 #define STIMULUSGROUP_LOAD_MULTIPLIER 0.1
 
-using namespace std;
+namespace auryn {
 
 
 /*! \brief Provides a poisson stimulus at random intervals in one or more
@@ -51,22 +51,33 @@ class StimulusGroup : public SpikingGroup
 {
 private:
 	AurynTime * clk;
-	AurynTime * ttl;
-	vector<type_pattern> stimuli;
-	AurynFloat * activity;
 
 	/*! Internal name for the stimfile (tiser stands for time series). */
-	fstream tiserfile;
+	std::fstream tiserfile;
 
 	AurynFloat base_rate;
 
 	int off_pattern;
+
+
+
+protected:
+	AurynTime * ttl;
+
+	std::vector<type_pattern> stimuli;
+	AurynFloat * activity;
+
+	/*! Stimulus order */
+	StimulusGroupModeType stimulus_order ;
 
 	/*! Foreground Poisson field pointer */
 	NeuronID fgx;
 
 	/*! Background Poisson field pointer */
 	NeuronID bgx;
+
+	/*! stimulus probabilities */
+	std::vector<double> probabilities ;
 
 	/*! pseudo random number generators */
 	static boost::mt19937 poisson_gen; 
@@ -75,23 +86,22 @@ private:
 	static boost::mt19937 order_gen; 
 	static boost::uniform_01<boost::mt19937> order_die; 
 
-	/*! Stimulus order */
-	StimulusGroupModeType stimulus_order ;
-
-	/*! stimulus probabilities */
-	vector<double> probabilities ;
 
 	/*! current stimulus index */
 	unsigned int cur_stim_index ;
 	bool stimulus_active;
 
-	/*! next stimulus time requiring change in rates */
+	/*! \brief next stimulus time requiring change in rates */
 	AurynTime next_action_time ;
+
+	/*! \brief last stimulus time requiring change in rates */
+	AurynTime last_action_time ;
 
 	/*! Standard initialization */
 	void init(StimulusGroupModeType stimulusmode, string stimfile, AurynFloat baserate);
+
 	/*! Draw all Time-To-Live (ttls) typically after changing the any of the activiteis */
-	void redraw();
+	virtual void redraw();
 
 	/*! write current stimulus to stimfile */
 	void write_stimulus_file(AurynDouble time);
@@ -177,18 +187,30 @@ public:
 	void set_next_action_time(double time);
 
 	/*! Setter for pattern probability distribution */
-	void set_distribution ( vector<double> probs );
+	void set_distribution ( std::vector<double> probs );
 	/*! Getter for pattern probability distribution */
-	vector<double> get_distribution ( );
+	std::vector<double> get_distribution ( );
 	/*! Getter for pattern i of the probability distribution */
 	double get_distribution ( int i );
+
+	/*! \brief returns the last action (stim on/off) time in units of AurynTime */
+	AurynTime get_last_action_time();
+
+	/*! \brief returns the index of the current (or last -- if not active anymore) active stimulus */
+	unsigned int get_cur_stim();
+
+	/*! \brief Returns true if currently a stimulus is active and false otherwise. */
+	bool get_stim_active();
+
 	/*! Initialized distribution to be flat */
 	void flat_distribution( );
 	/*! Normalizes the distribution */
 	void normalize_distribution( );
 
-	vector<type_pattern> * get_patterns();
+	std::vector<type_pattern> * get_patterns();
 
 };
+
+}
 
 #endif /*STIMULUSGROUP_H_*/

@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -76,6 +76,7 @@
 #include "ProfilePoissonGroup.h"
 #include "StructuredPoissonGroup.h"
 #include "CorrelatedPoissonGroup.h"
+#include "MovingBumpGroup.h"
 #include "FileModulatedPoissonGroup.h"
 #include "AuditoryBeepGroup.h"
 #include "StimulusGroup.h"
@@ -85,6 +86,7 @@
 // Checker definitions
 #include "Checker.h"
 #include "RateChecker.h"
+#include "WeightChecker.h"
 
 // Monitor and stimulator definitions
 #include "Monitor.h"

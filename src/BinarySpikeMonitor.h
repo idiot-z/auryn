@@ -1,5 +1,5 @@
 /*
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 * Contributed by Ankur Sinha
 *
 * This file is part of Auryn, a simulation package for plastic
@@ -33,7 +33,7 @@
 #include "System.h"
 #include <fstream>
 
-using namespace std;
+namespace auryn {
 
 /*! \brief The standard Monitor object to record spikes from a
  * SpikingGroup and write them to file
@@ -42,7 +42,7 @@ using namespace std;
  * and writes all or a specified range of the neurons spikes to a
  * file that has to be given at construction time.
  */
-class BinarySpikeMonitor : Monitor
+class BinarySpikeMonitor : public Monitor
 {
 private:
     NeuronID n_from;
@@ -51,18 +51,21 @@ private:
 	SpikeContainer::const_iterator it;
 	SpikingGroup * src;
 	NeuronID offset;
-	void init(SpikingGroup * source, string filename, NeuronID from, NeuronID to);
-	virtual void open_output_file(string filename);
+	void init(SpikingGroup * source, std::string filename, NeuronID from, NeuronID to);
+	virtual void open_output_file(std::string filename);
 	void free();
 
 public:
-	BinarySpikeMonitor(SpikingGroup * source, string filename);
-	BinarySpikeMonitor(SpikingGroup * source, string filename, NeuronID to);
-	BinarySpikeMonitor(SpikingGroup * source, string filename, NeuronID from, NeuronID to);
+	BinarySpikeMonitor(SpikingGroup * source, std::string filename);
+	BinarySpikeMonitor(SpikingGroup * source, std::string filename, NeuronID to);
+	BinarySpikeMonitor(SpikingGroup * source, std::string filename, NeuronID from, NeuronID to);
 	void set_offset(NeuronID of);
 	void set_every(NeuronID every);
 	virtual ~BinarySpikeMonitor();
 	void propagate();
 };
+
+
+}
 
 #endif /*BINARYSPIKEMONITOR_H_*/

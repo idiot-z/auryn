@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -40,7 +40,7 @@
 #include <boost/random/exponential_distribution.hpp>
 #include <boost/random/normal_distribution.hpp>
 
-using namespace std;
+namespace auryn {
 
 /*! \brief Provides a unity matrix like connectivity */
 class IdentityConnection : public Connection
@@ -75,14 +75,16 @@ public:
 	virtual void propagate();
 
 	virtual AurynDouble sum();
-	virtual void stats(AurynFloat &mean, AurynFloat &std);
+	virtual void stats(AurynDouble &mean, AurynDouble &std);
 	virtual bool write_to_file(string filename);
 	virtual bool load_from_file(string filename);
 	virtual AurynFloat mean();
 
 	/*! Returns a vector of ConnectionsID of a block specified by the arguments */
-	vector<neuron_pair> get_block(NeuronID lo_row, NeuronID lo_col, NeuronID hi_row,  NeuronID hi_col);
+	std::vector<neuron_pair> get_block(NeuronID lo_row, NeuronID lo_col, NeuronID hi_row,  NeuronID hi_col);
 
 };
+
+}
 
 #endif /*IDENTITYCONNECTION_H_*/

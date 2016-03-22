@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -25,10 +25,12 @@
 
 #include "AIFGroup.h"
 
+using namespace auryn;
+
 
 AIFGroup::AIFGroup( NeuronID size, AurynFloat load, NeuronID total ) : NeuronGroup(size,load,total)
 {
-	sys->register_spiking_group(this);
+	auryn::sys->register_spiking_group(this);
 	if ( evolve_locally() ) init();
 }
 

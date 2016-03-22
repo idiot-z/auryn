@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -33,7 +33,7 @@
 #include <fstream>
 #include <iomanip>
 
-using namespace std;
+namespace auryn {
 
 /*! \brief Records the AMPA conductance from one specific unit from the source group. */
 class AmpaMonitor : protected Monitor
@@ -42,12 +42,14 @@ protected:
 	NeuronGroup * src;
 	NeuronID nid;
 	AurynTime ssize;
-	void init(NeuronGroup * source, NeuronID id, string filename, AurynTime stepsize);
+	void init(NeuronGroup * source, NeuronID id, std::string filename, AurynTime stepsize);
 	
 public:
-	AmpaMonitor(NeuronGroup * source, NeuronID id, string filename, AurynTime stepsize=1);
+	AmpaMonitor(NeuronGroup * source, NeuronID id, std::string filename, AurynTime stepsize=1);
 	virtual ~AmpaMonitor();
 	void propagate();
 };
+
+}
 
 #endif /*AMPAMONITOR_H_*/

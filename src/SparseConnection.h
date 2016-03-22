@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -38,6 +38,7 @@
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
+#include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
 #include <boost/random/exponential_distribution.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -45,7 +46,7 @@
 
 #define WARN_FILL_LEVEL 0.8
 
-using namespace std;
+namespace auryn {
 
 typedef ComplexMatrix<AurynWeight> ForwardMatrix;
 
@@ -133,7 +134,7 @@ public:
 	 * function. */
 	bool wrap_patterns;
 
-	/*! A pointer that points per defalt to the SimpleMatrix
+	/*! A pointer that points per default to the ComplexMatrix
 	 * that stores the connectinos. */
 	ForwardMatrix * w; 
 
@@ -151,15 +152,20 @@ public:
 	 * allocate the approximately right amount of memory inadvance. It is good habit to specify at time of initialization also 
 	 * a connection name and the transmitter type. Both can be set separately with set_transmitter and set_name if the function call gets
 	 * too long and ugly. A connection name is often handy during debugging and the transmitter type is a crucial for obvious resons ...  */
-	SparseConnection(SpikingGroup * source, NeuronGroup * destination, 
-			AurynWeight weight, AurynFloat sparseness=0.05, 
-			TransmitterType transmitter=GLUT, string name="SparseConnection");
+	SparseConnection(
+			SpikingGroup * source, 
+			NeuronGroup * destination, 
+			AurynWeight weight, 
+			AurynDouble sparseness=0.05, 
+			TransmitterType transmitter=GLUT, 
+			string name="SparseConnection"
+			);
 
 	/*! \brief This constructor tries to clone a connection by guessing all parameters 
 	 * except source and destination from another connection instance. */
 	SparseConnection(SpikingGroup * source, NeuronGroup * destination, SparseConnection * con, string name="SparseConnection");
 
-	SparseConnection(SpikingGroup * source, NeuronGroup * destination, AurynWeight weight, AurynFloat sparseness, NeuronID lo_row, NeuronID hi_row, NeuronID lo_col, NeuronID hi_col, TransmitterType transmitter=GLUT);
+	SparseConnection(SpikingGroup * source, NeuronGroup * destination, AurynWeight weight, AurynDouble sparseness, NeuronID lo_row, NeuronID hi_row, NeuronID lo_col, NeuronID hi_col, TransmitterType transmitter=GLUT);
 	
 	/*! \brief The default destructor */
 	virtual ~SparseConnection();
@@ -189,10 +195,16 @@ public:
 	virtual void set(NeuronID i, NeuronID j, AurynWeight value);
 
 	/*! \brief Sets a list of connection to value if they exists  */
-	virtual void set(vector<neuron_pair> element_list, AurynWeight value);
+	virtual void set(std::vector<neuron_pair> element_list, AurynWeight value);
 
 	/*! \brief Synonym for random_data_lognormal  */
 	void random_data(AurynWeight mean, AurynWeight sigma); 
+
+	/*! \brief Initialize with random binary at wlo and whi.  
+	 * \param wlo The lower weight value. 
+	 * \param whi The higher weight value.
+	 * \param prob the probability for the higher value. */
+	void init_random_binary(AurynFloat prob=0.5, AurynWeight wlo=0.0, AurynWeight whi=1.0); 
 
 	/*! \brief Set weights of all existing connections randomly using a normal distrubtion */
 	void random_data_normal(AurynWeight mean, AurynWeight sigma); 
@@ -224,7 +236,7 @@ public:
 	/*! \brief Connect src and dst SpikingGroup and NeuronGroup randomly with given sparseness 
 	 *
 	 * This function should be usually called from the constructor directly. */
-	void connect_random(AurynWeight weight=1.0, float sparseness=0.05, bool skip_diag=false);
+	void connect_random(AurynWeight weight=1.0, AurynDouble sparseness=0.05, bool skip_diag=false);
 
 	/*! \brief Underlying sparse fill method. 
 	 *
@@ -232,7 +244,7 @@ public:
 	 * matrix independent of the number of ranks. 
 	 */ 
 	void connect_block_random(AurynWeight weight, 
-			double sparseness, 
+			AurynDouble sparseness, 
 			NeuronID lo_row, 
 			NeuronID hi_row, 
 			NeuronID lo_col, 
@@ -289,7 +301,11 @@ public:
 	 *
 	 * Returns mean and variance of default weight matrix (typically referenced as w 
 	 * in a given SparseConnection */
-	virtual void stats(AurynFloat &mean, AurynFloat &std);
+	virtual void stats(AurynDouble &mean, AurynDouble &std);
+
+	/*! \brief Computes mean and variance of weights for matrix state zid
+	 */
+	virtual void stats(AurynDouble &mean, AurynDouble &std, NeuronID zid);
 
 
 	/*! \brief Writes rank specific weight matrix on the same rank to a file
@@ -348,13 +364,15 @@ public:
 	AurynWeight get_max_weight();
 
 	/*! \brief Returns a vector of ConnectionsID of a block specified by the arguments */
-	vector<neuron_pair> get_block(NeuronID lo_row, NeuronID hi_row, NeuronID lo_col, NeuronID hi_col);
+	std::vector<neuron_pair> get_block(NeuronID lo_row, NeuronID hi_row, NeuronID lo_col, NeuronID hi_col);
 
 	/*! \brief Returns a vector of ConnectionsID of postsynaptic parterns of neuron i */
-	vector<neuron_pair> get_post_partners(NeuronID i);
+	std::vector<neuron_pair> get_post_partners(NeuronID i);
 
 	/*! \brief Returns a vector of ConnectionsID of presynaptic parterns of neuron i */
-	vector<neuron_pair> get_pre_partners(NeuronID j);
+	std::vector<neuron_pair> get_pre_partners(NeuronID j);
 };
+
+} // namespace 
 
 #endif /*SPARSECONNECTION_H_*/

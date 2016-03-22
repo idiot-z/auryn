@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -35,7 +35,7 @@
 #include <boost/random/variate_generator.hpp>
 #include <boost/random/exponential_distribution.hpp>
 
-using namespace std;
+namespace auryn {
 
 typedef SimpleMatrix<AurynWeight*> BackwardMatrix;
 
@@ -93,7 +93,7 @@ public:
 			string name="RateModulatedConnection");
 	virtual ~RateModulatedConnection();
 
-	virtual void stats(AurynFloat &mean, AurynFloat &std);
+	virtual void stats(AurynDouble &mean, AurynDouble &std);
 
 	void set_eta(AurynFloat value);
 
@@ -105,5 +105,7 @@ public:
 	virtual bool load_from_file(string filename);
 	virtual bool write_to_file(string filename);
 };
+
+}
 
 #endif /*RATEMODULATEDCONNECTION_H_*/

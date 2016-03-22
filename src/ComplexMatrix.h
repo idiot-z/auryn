@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -28,12 +28,11 @@
 
 #include "auryn_global.h"
 #include "auryn_definitions.h"
-#include <string.h>
 
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/split_member.hpp>
 
-using namespace std;
+namespace auryn {
 
 /*! \brief Template for a sparse matrix with row major ordering and fast access
  * of rows and capability to store float values per matrix entry.
@@ -162,10 +161,10 @@ public:
 	void copy(ComplexMatrix * mat);
 	void set_data(AurynLong i, T value);
 	void scale_data(AurynLong i, T value);
-	/*! Gets the matching data ptr for a given index i and state z*/
-	T * get_data_ptr(AurynLong i, StateID z=0);
 	/*! Gets the matching data entry for a given index i and state z*/
 	T get_data(AurynLong i, StateID z=0);
+	/*! Gets the matching data ptr for a given index i and state z*/
+	T * get_data_ptr(AurynLong i, StateID z=0);
 	/*! Gets the matching data ptr for a given index pointer and state z*/
 	T * get_data_ptr(const NeuronID * ind_ptr, StateID z=0);
 	/*! Gets the matching data value for a given index pointer and state z*/
@@ -185,8 +184,11 @@ public:
 	/*! Returns data index to a particular element specifed by i and j */
 	AurynLong get_data_index(NeuronID i, NeuronID j, NeuronID z=0);
 
-	/*! Returns data index to a particular element specifed by a data pointer */
-	AurynLong get_data_index(T * ptr);
+	/*! \brief Returns data index to a particular element specifed by an index pointer */
+	AurynLong get_data_index(const NeuronID * ind_ptr);
+
+	/*! \brief Returns data index to a particular element specifed by a data pointer */
+	AurynLong get_data_index(const T * ptr);
 
 	/* Methods concerning synaptic state vectors. */
 	void set_num_synapse_states(StateID zsize);
@@ -195,21 +197,25 @@ public:
 	/*! Gets pointer for the element behind the last of a given synaptic state vector */
 	T * get_state_end(StateID z=0);
 	/*! Sets all values in state x to value. */
-	void state_set_all(AurynWeight * x, T value);
+	void state_set_all(T * x, T value);
 	/*! Computes a*x + y and stores result in y */
-	void state_saxpy(T a, AurynWeight * x, AurynWeight * y);
+	void state_saxpy(T a, T * x, T * y);
 	/*! Multiplies x and y and stores result in y */
-	void state_mul(AurynWeight * x, AurynWeight * y);
+	void state_mul(T * x, T * y);
 	/*! Adds x and y and stores result in y */
-	void state_add(AurynWeight * x, AurynWeight * y);
+	void state_add(T * x, T * y);
 	/*! Computes x-y and stores result in y */
-	void state_sub(AurynWeight * x, AurynWeight * y);
+	void state_sub(T * x, T * y);
 	/*! Computes x-y and stores result in res */
-	void state_sub(AurynWeight * x, AurynWeight * y, AurynWeight * res);
+	void state_sub(T * x, T * y, T * res);
 	/*! Scale state x by a. */
-	void state_scale(T a, AurynWeight * x);
+	void state_scale(T a, T * x);
 	/*! Adds constant a to all values in x */
-	void state_add_const(T a, AurynWeight * x);
+	void state_add_const(T a, T * x);
+	/*! Clips state values to interval [a,b] */
+	void state_clip(T * x, T a, T b);
+	/*! Get data pointer for that state */
+	T * state_get_data_ptr(T * x, NeuronID i);
 
 	T get_value(AurynLong data_index);
 	void add_value(AurynLong data_index, T value);
@@ -249,6 +255,7 @@ public:
 	NeuronID get_z_values();
 	NeuronID ** get_rowptrs();
 	T * get_data_begin(const StateID z=0);
+	/*! \brief Returns the data value corresponding to the element behind the last nonzero element. */
 	T * get_data_end(const StateID z=0);
 	/*! Returns the data value to an item that is i-th in the colindex array */
 	T get_value(NeuronID i);
@@ -501,6 +508,7 @@ T * ComplexMatrix<T>::get_state_begin(NeuronID z)
 	return get_ptr(get_datasize()*z);
 }
 
+
 template <typename T>
 T * ComplexMatrix<T>::get_state_end(NeuronID z)
 {
@@ -528,7 +536,7 @@ T * ComplexMatrix<T>::get_ptr(NeuronID i, NeuronID j)
 		c = lo + (hi-lo)/2;
 		if ( *c < j ) lo = c+1;
 		else hi = c;
-		//cout << i << ":" << j << "   " << *lo << ":" << *hi << endl;
+		//std::cout << i << ":" << j << "   " << *lo << ":" << *hi << endl;
 	}
 	
 	if ( *lo == j ) {
@@ -545,7 +553,13 @@ AurynLong ComplexMatrix<T>::get_data_index(NeuronID i, NeuronID j, NeuronID z)
 }
 
 template <typename T>
-AurynLong ComplexMatrix<T>::get_data_index(T * ptr)
+AurynLong ComplexMatrix<T>::get_data_index(const NeuronID * ind_ptr)
+{
+	return ind_ptr - get_ind_begin();
+}
+
+template <typename T>
+AurynLong ComplexMatrix<T>::get_data_index(const T * ptr)
 {
 	return ptr - get_data_begin();
 }
@@ -730,7 +744,7 @@ void ComplexMatrix<T>::print()
 {
 	for (NeuronID i = 0 ; i < m_rows ; ++i) {
 		for (NeuronID * r = get_row_begin(i) ; r != get_row_end(i) ; ++r ) {
-			cout << i << " " << *r << " " << elementdata[r-colinds] << "\n"; 
+			std::cout << i << " " << *r << " " << elementdata[r-colinds] << "\n"; 
 			// FIXME not dumping the other states yet
 		}
 	}
@@ -747,7 +761,7 @@ double ComplexMatrix<T>::mean()
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_set_all(AurynWeight * x, T value)
+void ComplexMatrix<T>::state_set_all(T * x, T value)
 {
 	for (T * iter=x;
 			 iter!=x+get_nonzero();
@@ -757,7 +771,7 @@ void ComplexMatrix<T>::state_set_all(AurynWeight * x, T value)
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_saxpy(T a, AurynWeight * x, AurynWeight * y)
+void ComplexMatrix<T>::state_saxpy(T a, T * x, T * y)
 {
 	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
 		y[i] = a*x[i]+y[i];
@@ -765,7 +779,7 @@ void ComplexMatrix<T>::state_saxpy(T a, AurynWeight * x, AurynWeight * y)
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_mul(AurynWeight * x, AurynWeight * y)
+void ComplexMatrix<T>::state_mul(T * x, T * y)
 {
 	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
 		y[i] = x[i]*y[i];
@@ -773,7 +787,7 @@ void ComplexMatrix<T>::state_mul(AurynWeight * x, AurynWeight * y)
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_add(AurynWeight * x, AurynWeight * y)
+void ComplexMatrix<T>::state_add(T * x, T * y)
 {
 	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
 		y[i] = x[i]+y[i];
@@ -781,7 +795,7 @@ void ComplexMatrix<T>::state_add(AurynWeight * x, AurynWeight * y)
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_sub(AurynWeight * x, AurynWeight * y, AurynWeight * res)
+void ComplexMatrix<T>::state_sub(T * x, T * y, T * res)
 {
 	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
 		res[i] = x[i]-y[i];
@@ -789,13 +803,13 @@ void ComplexMatrix<T>::state_sub(AurynWeight * x, AurynWeight * y, AurynWeight *
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_sub(AurynWeight * x, AurynWeight * y)
+void ComplexMatrix<T>::state_sub(T * x, T * y)
 {
 	state_sub(x,y,y);
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_scale(T a, AurynWeight * y)
+void ComplexMatrix<T>::state_scale(T a, T * y)
 {
 	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
 		y[i] = a*y[i];
@@ -803,11 +817,26 @@ void ComplexMatrix<T>::state_scale(T a, AurynWeight * y)
 }
 
 template <typename T>
-void ComplexMatrix<T>::state_add_const(T a, AurynWeight * y)
+void ComplexMatrix<T>::state_add_const(T a, T * y)
 {
 	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
 		y[i] = a+y[i];
 	}
+}
+
+template <typename T>
+void ComplexMatrix<T>::state_clip(T * x, T a, T b)
+{
+	for (AurynLong i = 0 ; i < get_nonzero() ; ++i ) {
+		if ( x[i] < a ) x[i] = a; 
+		else if ( x[i] > b ) x[i] = b; 
+	}
+}
+
+template <typename T>
+T * ComplexMatrix<T>::state_get_data_ptr(T * x, NeuronID i)
+{
+	return x+i;
 }
 
 template <typename T>
@@ -840,6 +869,7 @@ NeuronID ComplexMatrix<T>::get_data_offset(NeuronID * r)
 	return r-get_ind_begin();
 }
 
+}
 
 #endif /*COMPLEXMATRIX_H_*/
 

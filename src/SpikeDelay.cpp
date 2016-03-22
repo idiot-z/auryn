@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -24,6 +24,8 @@
 */
 
 #include "SpikeDelay.h"
+
+using namespace auryn;
 
 AurynTime * SpikeDelay::clock_ptr = NULL;
 

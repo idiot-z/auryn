@@ -1,29 +1,31 @@
-/*
- * Copyright 2014 Friedemann Zenke
- *
- * This file is part of Auryn, a simulation package for plastic
- * spiking neural networks.
- *
- * Auryn is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Auryn is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Auryn.  If not, see <http://www.gnu.org/licenses/>.
- *
- * If you are using Auryn or parts of it for your work please cite:
- * Zenke, F. and Gerstner, W., 2014. Limits to high-speed simulations
- * of spiking neural networks using general-purpose computers.
- * Front Neuroinform 8, 76. doi: 10.3389/fninf.2014.00076
- */
+/* 
+* Copyright 2014-2016 Friedemann Zenke
+*
+* This file is part of Auryn, a simulation package for plastic
+* spiking neural networks.
+* 
+* Auryn is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+* 
+* Auryn is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+* 
+* You should have received a copy of the GNU General Public License
+* along with Auryn.  If not, see <http://www.gnu.org/licenses/>.
+*
+* If you are using Auryn or parts of it for your work please cite:
+* Zenke, F. and Gerstner, W., 2014. Limits to high-speed simulations 
+* of spiking neural networks using general-purpose computers. 
+* Front Neuroinform 8, 76. doi: 10.3389/fninf.2014.00076
+*/
 
 #include "TripletConnection.h"
+
+using namespace auryn;
 
 void TripletConnection::init(AurynFloat tau_hom, AurynFloat eta, AurynFloat kappa, AurynFloat maxweight)
 {
@@ -95,23 +97,23 @@ TripletConnection::TripletConnection(SpikingGroup * source, NeuronGroup * destin
                            filename,
                            transmitter)
 {
-        init(tau_hom, eta, kappa, maxweight);
-        init_shortcuts();
+	init(tau_hom, eta, kappa, maxweight);
+	init_shortcuts();
 }
 
-TripletConnection::TripletConnection(SpikingGroup * source, NeuronGroup * destination,
-                                     AurynWeight weight, AurynFloat sparseness,
-                                     AurynFloat tau_hom,
-                                     AurynFloat eta,
-                                     AurynFloat kappa, AurynFloat maxweight ,
-                                     TransmitterType transmitter,
-                                     string name)
-        : DuplexConnection(source,
-                           destination,
-                           weight,
-                           sparseness,
-                           transmitter,
-                           name)
+TripletConnection::TripletConnection(SpikingGroup * source, NeuronGroup * destination, 
+		AurynWeight weight, AurynFloat sparseness, 
+		AurynFloat tau_hom, 
+		AurynFloat eta, 
+		AurynFloat kappa, AurynFloat maxweight , 
+		TransmitterType transmitter,
+		std::string name) 
+: DuplexConnection(source, 
+		destination, 
+		weight, 
+		sparseness, 
+		transmitter, 
+		name)
 {
         init(tau_hom, eta, kappa, maxweight);
         if ( name.empty() )

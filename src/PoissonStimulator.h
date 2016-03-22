@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -36,7 +36,7 @@
 #include <boost/random/variate_generator.hpp>
 #include <boost/random/poisson_distribution.hpp>
 
-using namespace std;
+namespace auryn {
 
 /*! \brief Stimulator class to inject timeseries of currents to patterns (subpopulations) of neurons 
  * 
@@ -111,5 +111,7 @@ public:
 	void propagate();
 
 };
+
+}
 
 #endif /*POISSONSTIMULATOR_H_*/

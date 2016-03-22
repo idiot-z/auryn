@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -26,34 +26,36 @@
 #include "Logger.h"
 #include "auryn_definitions.h"
 
-Logger::Logger(string filename, int rank, LogMessageType console, LogMessageType file)
+using namespace auryn;
+
+Logger::Logger(std::string filename, int rank, LogMessageType console, LogMessageType file)
 {
 	console_out = console; 
 	file_out  = file;
 	set_rank(rank);
 	fname = filename;
 
-	outfile.open(fname.c_str(),ios::out);
+	outfile.open(fname.c_str(),std::ios::out);
 	if (!outfile) {
 		std::cerr << "Can't open output logger output file " << fname << std::endl;
 	    throw AurynOpenFileException();
 	}
 
 
-	stringstream oss;
+	std::stringstream oss;
 	oss << "Logger started on Rank " << local_rank;
 	msg(oss.str(),NOTIFICATION);
 }
 
 Logger::~Logger()
 {
-	stringstream oss;
+	std::stringstream oss;
 	oss << "Logger stopped";
 	msg(oss.str(),NOTIFICATION);
 	outfile.close();
 }
 
-void Logger::msg( string text, LogMessageType type, bool global, int line, string srcfile )
+void Logger::msg( std::string text, LogMessageType type, bool global, int line, std::string srcfile )
 {
 	time_t rawtime;
 	struct tm * timeinfo;
@@ -62,7 +64,7 @@ void Logger::msg( string text, LogMessageType type, bool global, int line, strin
 	char tbuffer [80];
 	strftime (tbuffer,80,"%x %X",timeinfo);
 
-	stringstream oss;
+	std::stringstream oss;
 	oss << tbuffer << ":: ";
 	switch ( type ) {
 		case WARNING:
@@ -85,40 +87,40 @@ void Logger::msg( string text, LogMessageType type, bool global, int line, strin
 		if ( last_message != text ) {
 			if ( type >= CERRLEVEL )
 				if ( global ) {
-					cerr << "(!!) " << text << endl;
+					std::cerr << "(!!) " << text << std::endl;
 				} else {
-					cerr << "(!!) " << "on rank " << local_rank << ": " << text << endl;
+					std::cerr << "(!!) " << "on rank " << local_rank << ": " << text << std::endl;
 				}
 			else
-				cout << "(" << setw(2) << local_rank << ") " << text << endl;
+				std::cout << "(" << std::setw(2) << local_rank << ") " << text << std::endl;
 		} 
 	}
 
 	if ( type >= file_out)
-		outfile << oss.str() << endl;
+		outfile << oss.str() << std::endl;
 
 	last_message = text;
 }
 
-void Logger::parameter(string name, double value) 
+void Logger::parameter(std::string name, double value) 
 {
-	stringstream oss;
-	oss << scientific << "  Parameter " << name << "=" << value;
+	std::stringstream oss;
+	oss << std::scientific << "  Parameter " << name << "=" << value;
 	msg(oss.str(),SETTINGS,true);
 }
 
-void Logger::parameter(string name, int value) 
+void Logger::parameter(std::string name, int value) 
 {
-	stringstream oss;
-	oss << scientific << "Setting " << name << "=" << value;
+	std::stringstream oss;
+	oss << std::scientific << "Setting " << name << "=" << value;
 	msg(oss.str(),SETTINGS,true);
 }
 
-void Logger::parameter(string name, string value) 
+void Logger::parameter(std::string name, std::string value) 
 {
-	stringstream oss;
+	std::stringstream oss;
 	oss.precision(9);
-	oss << scientific << "Setting " << name << "=" << value;
+	oss << std::scientific << "Setting " << name << "=" << value;
 	msg(oss.str(),SETTINGS,true);
 }
 

@@ -23,37 +23,55 @@
 * Front Neuroinform 8, 76. doi: 10.3389/fninf.2014.00076
 */
 
-#include "RealTimeMonitor.h"
+#include "WeightChecker.h"
 
 using namespace auryn;
 
-RealTimeMonitor::RealTimeMonitor(std::string filename, AurynDouble start, AurynDouble stop) : Monitor(filename)
+WeightChecker::WeightChecker(Connection * source, AurynFloat max) : Checker()
 {
-	auryn::sys->register_monitor(this);
+	init(source,0.,max,10.);
+}
 
-	t_start = start/dt;
-	t_stop = stop/dt;
+WeightChecker::WeightChecker(Connection * source, AurynFloat min, AurynFloat max, AurynFloat timestep) : Checker()
+{
+	init(source,min,max,timestep);
+}
 
-	if (auryn::sys->get_com()->rank() == 0) {
-		ptime_offset = boost::posix_time::microsec_clock::local_time();
-		std::string sendstring = boost::posix_time::to_iso_string(ptime_offset);
-		broadcast(*auryn::sys->get_com(), sendstring, 0);
-	} else {
-		std::string timestring;
-		broadcast(*auryn::sys->get_com(), timestring , 0);
-		ptime_offset = boost::posix_time::from_iso_string(timestring);
+WeightChecker::~WeightChecker()
+{
+}
+
+void WeightChecker::init(Connection * source, AurynFloat min, AurynFloat max, AurynFloat timestep)
+{
+	auryn::sys->register_checker(this);
+	logger->msg("WeightChecker:: Initializing", VERBOSE);
+
+	source_ = source;
+	wmin = min;
+	wmax = max;
+
+	if (timestep<0.0) {
+		logger->msg("WeightChecker:: Minimally allowed timestep is 1dt", WARNING);
+		timestep = 1;
+	} else timestep_ = timestep/dt;
+
+}
+
+
+bool WeightChecker::propagate()
+{
+
+	if ( (sys->get_clock()%timestep_) == 0 ) {
+		AurynDouble mean, std;
+		source_->stats(mean, std);
+		if ( mean<wmin || mean>wmax ) { 
+			std::stringstream oss;
+			oss << "WeightChecker:: Detected mean weight of " << mean ;
+			logger->msg(oss.str(),WARNING);
+			return false; // break run
+		}
 	}
+
+	return true; 
 }
 
-RealTimeMonitor::~RealTimeMonitor()
-{
-}
-
-void RealTimeMonitor::propagate()
-{
-	if ( t_stop > auryn::sys->get_clock() && t_start < auryn::sys->get_clock() ) {
-		boost::posix_time::ptime now = boost::posix_time::microsec_clock::local_time();
-		boost::posix_time::time_duration diff = now - ptime_offset;
-		outfile << (auryn::sys->get_clock()) << " " << diff.total_microseconds() << "\n";
-	}
-}

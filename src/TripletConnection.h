@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -34,8 +34,8 @@
 
 #define TRACE EulerTrace
 
-using namespace std;
 
+namespace auryn {
 
 /*! \brief Implements triplet STDP as described by Pfister and Gerstner 2006.
  *
@@ -163,5 +163,7 @@ public:
 	virtual void evolve();
 
 };
+
+}
 
 #endif /*TRIPLETCONNECTION_H_*/

@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -33,7 +33,7 @@
 #include <fstream>
 #include <iomanip>
 
-using namespace std;
+namespace auryn {
 
 /*! \brief Monitor class to record population firing rates
  * 
@@ -71,5 +71,7 @@ public:
 	/*! Implementation of necessary propagate() function. */
 	void propagate();
 };
+
+}
 
 #endif /*POPULATIONRATEMONITOR_H_*/

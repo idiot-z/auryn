@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -25,6 +25,7 @@
 
 #include "IFGroup.h"
 
+using namespace auryn;
 
 IFGroup::IFGroup( NeuronID size, AurynFloat load, NeuronID total ) : NeuronGroup(size,load,total)
 {
@@ -192,6 +193,13 @@ void IFGroup::set_tau_nmda(AurynFloat taum)
 	tau_nmda = taum;
 	calculate_scale_constants();
 }
+
+void IFGroup::set_tau_thr(AurynFloat tau)
+{
+	tau_thr = tau;
+	calculate_scale_constants();
+}
+
 
 AurynFloat IFGroup::get_tau_nmda()
 {

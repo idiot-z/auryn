@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -25,6 +25,8 @@
 
 #include "Connection.h"
 
+using namespace auryn;
+
 Connection::Connection()
 {
 	init();
@@ -36,7 +38,7 @@ Connection::Connection(NeuronID rows, NeuronID cols)
 	set_size(rows,cols);
 }
 
-Connection::Connection(SpikingGroup * source, NeuronGroup * destination, TransmitterType transmitter, string name)
+Connection::Connection(SpikingGroup * source, NeuronGroup * destination, TransmitterType transmitter, std::string name)
 {
 	set_source(source);
 	set_destination(destination);
@@ -50,6 +52,13 @@ void Connection::init(TransmitterType transmitter)
 {
 	set_transmitter(transmitter);
 	set_name("Unspecified");
+
+	number_of_spike_attributes = 0;
+
+	// Here we store how many spike attributes have already been 
+	// added to the stack due to other connections having the same
+	// source SpikingGroup. 
+	spike_attribute_offset = src->get_num_spike_attributes();
 }
 
 void Connection::set_size(NeuronID i, NeuronID j)
@@ -63,12 +72,12 @@ Connection::~Connection()
 {
 }
 
-void Connection::set_name(string name)
+void Connection::set_name(std::string name)
 {
 	connection_name = name;
 }
 
-string Connection::get_name()
+std::string Connection::get_name()
 {
 	return connection_name;
 }
@@ -101,6 +110,11 @@ void Connection::set_transmitter(TransmitterType transmitter)
 				set_transmitter(dst->get_ampa_ptr()->data);
 		}
 	} else set_transmitter((AurynWeight *)NULL);
+}
+
+void Connection::set_transmitter(string state_name)
+{
+	set_transmitter(dst->get_state_vector(state_name));
 }
 
 void Connection::set_transmitter(AurynWeight * ptr)
@@ -154,6 +168,45 @@ void Connection::safe_transmit(NeuronID id, AurynWeight amount)
 {
 	if ( dst->localrank(id) )
 		transmit( id, amount );
+}
+
+void Connection::add_number_of_spike_attributes(int x)
+{
+	if ( x <= 0 ) {
+		throw AurynSpikeAttributeSizeException();
+	}
+
+	number_of_spike_attributes += x; // we remember how many attributes are due to this connection
+	src->inc_num_spike_attributes(x);
+}
+
+SpikeContainer * Connection::get_pre_spikes()
+{
+	src->get_spikes();
+}
+
+SpikeContainer * Connection::get_post_spikes()
+{
+	dst->get_spikes_immediate();
+}
+
+
+AurynFloat Connection::get_spike_attribute(const NeuronID spike_array_pos, const int attribute_id)
+{
+	// We need to skip attributes by other Connection objects (spike_attribute_offset)
+	// and other attributes from this Connection. Note that if attribute_id is larger
+	// then number_of_spike_attributes the behavior will be undefined, but for performance
+	// reasons we do not check for this here.
+	NeuronID stackpos = spike_array_pos + (spike_attribute_offset+attribute_id)*src->get_spikes()->size();
+
+	#ifdef DEBUG
+	std::cout << "stack pos " << stackpos 
+		<< " value: " << std::setprecision(5) 
+		<< src->get_attributes()->at(stackpos) 
+		<< std::endl;
+	#endif //DEBUG
+
+	return src->get_attributes()->at(stackpos);
 }
 
 void Connection::evolve() 

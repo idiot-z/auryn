@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -24,6 +24,8 @@
 */
 
 #include "auryn_definitions.h"
+
+namespace auryn {
 
 int auryn_AlignOffset // copied from ATLAS
 (const int N,       /* max return value */
@@ -351,3 +353,4 @@ void auryn_vector_ushort_copy ( auryn_vector_ushort * src, auryn_vector_ushort *
 		dst->data[i] = src->data[i];
 }
 
+}

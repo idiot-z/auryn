@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -32,6 +32,8 @@
 #include "SpikingGroup.h"
 #include "NeuronGroup.h"
 
+namespace auryn {
+
 class System;
 
 /*! \brief The abstract base class for all Connection objects in Auryn
@@ -57,7 +59,7 @@ private:
 
 
 	NeuronID m_rows,n_cols;
-	string connection_name;
+	std::string connection_name;
 
 protected:
 	/*! Serialization function for saving the Connection state. Implement in derived classes to save
@@ -81,12 +83,21 @@ protected:
 	TransmitterType trans;
 	AurynFloat * target;
 
+	/*! \brief Number of spike attributes to expect with each spike transmitted through this connection.
+	 *
+	 * Should only be set through methods called during init.
+	 */
+	NeuronID number_of_spike_attributes;
+
+	/*! \brief 	Stores spike attribute offset in attribute array */
+	NeuronID spike_attribute_offset;
+
 	void init(TransmitterType transmitter=GLUT);
 
 public:
 	Connection();
 	Connection(NeuronID rows, NeuronID cols);
-	Connection(SpikingGroup * source, NeuronGroup * destination, TransmitterType transmitter=GLUT, string name="Connection");
+	Connection(SpikingGroup * source, NeuronGroup * destination, TransmitterType transmitter=GLUT, std::string name="Connection");
 	virtual ~Connection();
 
 	void set_size(NeuronID i, NeuronID j);
@@ -94,10 +105,10 @@ public:
 	/*! \brief Set name of connection
 	 *
 	 * The name will appear in error messages and save files */
-	void set_name(string name);
+	void set_name(std::string name);
 
 	/*! \brief Returns name of connection */
-	string get_name();
+	std::string get_name();
 
 	/*! \brief Get number of rows (presynaptic) in connection.
 	 *
@@ -125,6 +136,9 @@ public:
 
 	/*! \brief Sets target state of this connection as one of Auryn's default transmitter types */
 	void set_transmitter(TransmitterType transmitter);
+
+	/*! \brief Sets target state of this connection directly the name of a state vector */
+	void set_transmitter(string state_name);
 
 	/*! \brief Sets source SpikingGroup of this connection. */
 	void set_source(SpikingGroup * source);
@@ -171,13 +185,13 @@ public:
 	virtual AurynDouble sum() = 0;
 
 	/*! \brief Computes mean synaptic weight and std dev of all weights in this connection. */
-	virtual void stats(AurynFloat &mean, AurynFloat &std) = 0;
+	virtual void stats(AurynDouble &mean, AurynDouble &std) = 0;
 
 	/*! \brief Implements save to file functionality. Also called in save_network_state from System class. */
-	virtual bool write_to_file(string filename) = 0;
+	virtual bool write_to_file(std::string filename) = 0;
 
 	/*! \brief Implements load from file functionality. Also called in save_network_state from System class. */
-	virtual bool load_from_file(string filename) = 0;
+	virtual bool load_from_file(std::string filename) = 0;
 
 	/*! \brief Transmits a spike to a postsynaptic partner
 	 *
@@ -192,8 +206,33 @@ public:
 	void safe_transmit(NeuronID id, AurynWeight amount);
 
 	/*! Returns a vector of ConnectionsID of a block specified by the arguments. */
-	virtual vector<neuron_pair>  get_block(NeuronID lo_row, NeuronID lo_col, NeuronID hi_row,  NeuronID hi_col) = 0;
+	virtual std::vector<neuron_pair>  get_block(NeuronID lo_row, NeuronID lo_col, NeuronID hi_row,  NeuronID hi_col) = 0;
 
+	
+	/*! \brief Supplies pointer to SpikeContainer of all presynaptic spikes.
+	 *
+	 * This includes spikes from this group from all other nodes. 
+	 * This also means that these spikes have gone through the axonal dealy.
+	 * Equivalent to calling src->get_spikes(). */
+	SpikeContainer * get_pre_spikes();
+
+	/*! \brief Returns pointer to SpikeContainer for postsynaptic spikes on this node. 
+	 *
+	 * This corresponds to calling get_spikes_immediate() from the SpikingGroup. 
+	 * These spikes have been generated postsynaptically in the same timestep and have not 
+	 * been delayed yet. 
+	 * Equivalent to calling dst->get_spikes_immediate(). */
+	SpikeContainer * get_post_spikes();
+
+	/*! \brief Set up spike delay to accomodate x additional spike attributes.
+	 *
+	 * Spike attribute numbers can only be increased. 
+	 * This function can only be run during initialization.
+	 */
+	void add_number_of_spike_attributes(int x);
+
+	/*! \brief Returns spike attribute belonging to the spike at position i in the get_spikes() SpikeContainer. */
+	AurynFloat get_spike_attribute(const NeuronID i, const int attribute_id=0);
 };
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Connection)
@@ -202,6 +241,7 @@ inline void Connection::transmit(NeuronID id, AurynWeight amount)
 {
 	NeuronID localid = dst->global2rank(id);
 	target[localid]+=amount;
+}
 }
 
 #endif /*CONNECTION_H_*/

@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -33,7 +33,7 @@
 #include "SpikeDelay.h"
 
 
-using namespace std;
+namespace auryn {
 
 
 /*! \brief Doublet STDP All-to-All as implemented in NEST as stdp_synapse_hom 
@@ -118,5 +118,7 @@ public:
 	virtual void evolve();
 
 };
+
+}
 
 #endif /*STDPWDCONNECTION_H_*/

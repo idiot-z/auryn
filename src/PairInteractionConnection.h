@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -27,9 +27,11 @@
 #include "DuplexConnection.h"
 #include "EulerTrace.h"
 
-using namespace std;
+namespace auryn {
 
 
+/*! \brief STDP Connection class to simulate arbitrary nearest-neighbor STDP windows.
+ */
 class PairInteractionConnection : public DuplexConnection
 {
 
@@ -70,5 +72,7 @@ public:
 	virtual void propagate();
 
 };
+
+}
 
 #endif /*PAIRINTERACTIONCONNECTION_H_*/

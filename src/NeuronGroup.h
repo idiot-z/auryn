@@ -1,5 +1,5 @@
 /* 
-* Copyright 2014-2015 Friedemann Zenke
+* Copyright 2014-2016 Friedemann Zenke
 *
 * This file is part of Auryn, a simulation package for plastic
 * spiking neural networks.
@@ -38,6 +38,8 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/variate_generator.hpp>
 #include <boost/random/normal_distribution.hpp>
+
+namespace auryn {
 
 /*! \brief Abstract base class for all neuron groups.
  *
@@ -90,8 +92,8 @@ public:
 
 	void set_mem(NeuronID i, AurynState val);
 
-	void set_state(string name, NeuronID i, AurynState val);
-	void set_state(string name, AurynState val);
+	void set_state(std::string name, NeuronID i, AurynState val);
+	void set_state(std::string name, AurynState val);
 
 	AurynState get_ampa(NeuronID i);
 	void set_ampa(NeuronID i,AurynState val);
@@ -131,6 +133,6 @@ public:
 
 };
 
-
+}
 
 #endif /*NEURONGROUP_H_*/
