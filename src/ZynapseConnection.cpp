@@ -26,6 +26,7 @@
 #include "ZynapseConnection.h"
 
 boost::mt19937 ZynapseConnection::gen = boost::mt19937();
+// TODO has_been_seeded ?
 
 /********************
  *** constructors ***
@@ -103,7 +104,7 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 	seed(communicator->rank());
 
 	set_min_weight(wo);
-	set_max_weight(kw*wo);
+	set_max_weight(k_w*wo);
 
 	tr_pre->set_timeconstant(TAU_PRE);
 	tr_post->set_timeconstant(TAU_POST);
@@ -111,13 +112,18 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 
         set_plast_constants(a_m, a_p);
 
-        euler[0] = TUPD/TAUX;
-        euler[1] = TUPD/TAUYZ;
-        euler[2] = TUPD/TAUYZ;
+        euler[0] = TUPD/TAUX; // TODO adjust
+        euler[1] = TUPD/TAUY;
+        euler[2] = TUPD/TAUZ;
+
+        coeff[0] = 4/wo/wo/(k_w-1)/(k_w-1);
+        coeff[1] = wo*wo*wo*k_w*(1+k_w)/2;
+        coeff[2] = wo*wo*(1+k_w)*(1+k_w)/2 + wo*wo*k_w;
+        coeff[3] = 3*wo*(1+k_w)/2;
 
         timestep_synapses = TUPD/dt;
 
-        eta = sqrt(ETAXYZ*TUPD);
+        eta = wo*(k_w-1)*sqrt(ETAXYZ*TUPD)/2;
 
 	// Set number of synaptic states
 	w->set_num_synapse_states(3);
@@ -131,10 +137,12 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 
 	/* Define temporary state vectors */
 	// TODO what size?
+	//      check if def in .h
 	temp_state = new AurynWeight[w->get_nonzero()];
 	diff_state = new AurynWeight[2*w->get_nonzero()];
 
 	// Run finalize again to rebuild backward matrix
+	// TODO finalize?
 	finalize(); 
 }
 
@@ -148,53 +156,29 @@ void ZynapseConnection::set_plast_constants(AurynFloat a_m, AurynFloat a_p)
  *** body ***
  ************/
 
-// TODO rewrite with new dynamics
 void ZynapseConnection::integrate()
 {
-        compute_diffs();
-        for (int z=0; z!=3; z++) {
-                gsl_vector_float *x = layers[z];
-
-                // X^3-X = X*(X*X-1)
-                gsl_blas_scopy(x,bufs[0]);
-                auryn_vector_float_mul(bufs[0],x);
-                auryn_vector_float_add_constant(bufs[0],-1.);
-                auryn_vector_float_mul(bufs[0],x);
-                if (z==0) {
-                        // -meta*(1-dxy)*(y-x)
-                        gtogsl(bufs[1]);
-                        auryn_vector_float_add_constant(bufs[1],-1.);
-                        auryn_vector_float_mul(bufs[1],diffs[0]);
-                        // auryn_vector_float_saxpy(-TILT,bufs[1],bufs[0]); // for noise tuning only !!
-                        auryn_vector_float_saxpy(-META_YX,bufs[1],bufs[0]);
-                }
-                if (z==1) {
-                        // -meta*(1-dyz)*(z-y)
-                        auryn_vector_float_saxpy(META_ZY*(1.-dst->get_protein()),diffs[1],bufs[0]);
-                        // -tilt*dxy*(x-y)
-                        gtogsl(bufs[1]);
-                        auryn_vector_float_mul(bufs[1],diffs[0]);
-                        auryn_vector_float_saxpy(-TILT,bufs[1],bufs[0]);
-                }
-                if (z==2)
-                        // -tilt*dyz*(y-z)
-                        auryn_vector_float_saxpy(-TILT*dst->get_protein(),diffs[1],bufs[0]);
-                // add (t-to)/tau*(-Xdot) to X
-                auryn_vector_float_saxpy(-euler[z],bufs[0],x);
-                // noise
-                noise(z);
-        }
-        // diffs and couplings
+	AurynWeight *x = w->get_state_begin(0),
+		*y = w->get_state_begin(1),
+		*z = w->get_state_begin(2);
+	
+	for (AurynLong i = 0 ; i < w->get_nonzero() ; ++i ) {
+		AurynWeight xyi = x[i] - y[i],
+			yzi = y[i] - z[i],
+			gxy = tr_gxy->get(i);
+		x[i] += euler[0]*(coeff[0]*(coeff[1]-x[i]*(coeff[2]-x[i]*(coeff[3]-x[i]) ) ) -
+				  META_YX*(1-gxy)*xyi
+				  ) + eta*(*die)();
+		y[i] += euler[1]*(coeff[0]*(coeff[1]-y[i]*(coeff[2]-y[i]*(coeff[3]-y[i]) ) ) +
+				  TILT*gxy*xyi -
+				  META_ZY*(1-dst->get_protein())*yzi
+				  ) + eta*(*die)();
+		z[i] += euler[2]*(coeff[0]*(coeff[1]-z[i]*(coeff[2]-z[1]*(coeff[3]-z[i]) ) ) +
+				  TILT*dst->get_protein()*yzi
+				  ) + eta*(*die)();				  
+	}
 	// TODO add proteins to neurongroup
         dst->update_prot();
-}
-
-void ZynapseConnection::noise(NeuronID z)
-{
-        AurynWeight *data_begin = w->get_data_begin(z);
-        for (AurynWeight *dat=data_begin;
-             dat!=(data_begin+w->get_nonzero()); dat++)
-                *dat += eta*(*die)();
 }
 
 void ZynapseConnection::compute_diffs()

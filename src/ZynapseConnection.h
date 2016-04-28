@@ -44,7 +44,8 @@
 #define META_ZY 0.95*0.25
 
 #define TAUX 20.
-#define TAUYZ 200.
+#define TAUY 200.
+#define TAUZ 200.
 
 #define TUPD 100e-3
 
@@ -65,7 +66,7 @@
 #define TAU_LONG 0.04
 #define C_RESET 1.
 
-using namespace std;
+namespace auryn {
 
 /*! \brief Implements complex synapse as described by Ziegler et al. 2015.
  */
@@ -73,7 +74,7 @@ class ZynapseConnection : public TripletConnection
 {
 private:
 
-        AurynFloat euler[3], eta;
+        AurynFloat euler[3], coeff[4], eta;
         int timestep_synapses;
 
 	void init(AurynFloat wo, AurynFloat a_m, AurynFloat a_p,
@@ -157,4 +158,6 @@ public:
 //         void stats(AurynFloat &mean, AurynFloat &std, vector<NeuronID> * presynaptic_list);
 };
 
+}
+	
 #endif /*ZYNAPSECONNECTION_H_*/
