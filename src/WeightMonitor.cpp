@@ -100,9 +100,19 @@ void WeightMonitor::add_to_list(AurynWeight * ptr)
 	}
 }
 
-void WeightMonitor::add_to_list(NeuronID i, NeuronID j)
+void WeightMonitor::add_to_list(NeuronID i, NeuronID j, NeuronID z)
 {
-	add_to_list( mat->get_data_index(i,j) );
+	if ( mat->exists(i, j, z) ) {
+		add_to_list( mat->get_data_index(i, j, z) );
+	} else {
+		std::stringstream oss;
+		oss << "WeightMonitor:: Tried adding element " 
+			<< i << ", " 
+			<< j << " " 
+			"z=" << z << " " 
+			<< " but element does not exist";
+		logger->msg(oss.str());
+	}
 }
 
 void WeightMonitor::add_to_list( std::vector<neuron_pair>  vec, std::string label )
@@ -150,7 +160,7 @@ void WeightMonitor::add_equally_spaced(NeuronID number, NeuronID z)
 
 	std::stringstream oss;
 	oss << "WeightMonitor:: "
-		<< "Adding "
+		<< "Added "
 		<< number 
 		<< " equally spaced values.";
 	auryn::logger->msg(oss.str(),VERBOSE);
