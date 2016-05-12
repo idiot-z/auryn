@@ -27,6 +27,7 @@
 #define STATEMONITOR_H_
 
 #include "auryn_definitions.h"
+#include "AurynVector.h"
 #include "Monitor.h"
 #include "System.h"
 #include "Connection.h"
@@ -39,23 +40,42 @@ namespace auryn {
 class StateMonitor : protected Monitor
 {
 protected:
-	/*! The source SpikingGroup to record from */
+	/*! \brief The source SpikingGroup to record from */
 	SpikingGroup * src;
 
-	/*! Target variable */
+	/*! \brief Target variable */
 	AurynState * target_variable;
 
-	/*! The source neuron id to record from */
+	/*! \brief Last value (used for compression) */
+	AurynState lastval;
+	AurynState lastder;
+
+	/*! \brief The source neuron id to record from */
 	NeuronID nid;
-	/*! The step size (sampling interval) in units of dt */
+
+	/*! \brief The step size (sampling interval) in units of dt */
 	AurynTime ssize;
-	/*! Defines the maximum recording time in AurynTime to save space. */
+
+	/*! \brief Defines the maximum recording time in AurynTime to save space. */
 	AurynTime t_stop;
-	/*! Standard initialization */
-	void init(SpikingGroup * source, NeuronID id, string statename, string filename, AurynTime stepsize);
+
+	/*! \brief Standard initialization */
+	void init(string filename, AurynDouble stepsize);
 	
 public:
-	/*! Standard constructor 
+	/*! \brief Switch to enable/disable output compression 
+	 *
+	 * When set to true, Auryn will compute the derivative of two consecutive datapoints of the state
+	 * and only a value if the derivative changes. The correct function can then be recovered with linear
+	 * interpolation (i.e. plotting in gnuplot with lines will yield the correct output).
+	 * When compression is enabled the last value written to file always by one timestep with respect to
+	 * the simulation clock.
+	 * enable_compression is true by default.
+	 */
+	bool enable_compression;
+
+	/*! \brief Standard constructor 
+	 *
 	 * \param source The neuron group to record from
 	 * \param id The neuron id in the group to record from 
 	 * \param statename The name of the StateVector to record from
@@ -64,14 +84,16 @@ public:
 	 */
 	StateMonitor(SpikingGroup * source, NeuronID id, string statename, string filename, AurynDouble sampling_interval=dt);
 
-	/*! Alternative constructor
+	/*! \brief Alternative constructor
+	 *
 	 * \param state The source state vector
 	 * \param filename The filename of the file to dump the output to
 	 * \param sampling_interval The sampling interval in seconds
 	 */
 	StateMonitor(auryn_vector_float * state, NeuronID id, string filename, AurynDouble sampling_interval=dt);
 
-	/*! EulerTrace constructor
+	/*! \brief EulerTrace constructor
+	 *
 	 * \param trace The source synaptic trace
 	 * \param filename The filename of the file to dump the output to
 	 * \param sampling_interval The sampling interval in seconds
@@ -86,7 +108,7 @@ public:
 	 * snippets. */
 	void record_for(AurynDouble time=10.0);
 
-	/*! \brief Same as record_for(time) */
+	/*! \brief Set an absolute time when to stop recording. */
 	void set_stop_time(AurynDouble time=10.0);
 
 	virtual ~StateMonitor();

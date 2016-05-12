@@ -124,7 +124,7 @@ int main(int ac,char *av[]) {
 	char tmp [255];
 	std::stringstream logfile;
 	logfile << outputfile << "log";
-	logger = new Logger(logfile.str(),world.rank(),PROGRESS,EVERYTHING);
+	logger = new Logger(logfile.str(),world.rank());
 
 	sys = new System(&world);
 	// END Global stuff
@@ -188,11 +188,23 @@ int main(int ac,char *av[]) {
 	if (!sys->run(simtime,true)) 
 			errcode = 1;
 
+	if ( world.rank() == 0 ) {
+		logger->msg("Saving elapsed time ..." ,PROGRESS,true);
+		char filenamebuf [255];
+		sprintf(filenamebuf, "%s/elapsed.dat", dir.c_str());
+		std::ofstream timefile;
+		timefile.open(filenamebuf);
+		timefile << sys->get_last_elapsed_time() << std::endl;
+		timefile.close();
+	}
+
 	logger->msg("Freeing ..." ,PROGRESS,true);
 	delete sys;
 
 	if (errcode)
 		env.abort(errcode);
+
+
 
 	return errcode;
 }

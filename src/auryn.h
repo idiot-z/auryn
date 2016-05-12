@@ -39,6 +39,7 @@
 // Core simulator definitions
 #include "auryn_global.h"
 #include "auryn_definitions.h"
+#include "AurynVector.h"
 #include "System.h"
 #include "SyncBuffer.h"
 #include "Logger.h"
@@ -93,8 +94,6 @@
 // Monitor and stimulator definitions
 #include "Monitor.h"
 #include "GabaMonitor.h"
-#include "NmdaMonitor.h"
-#include "AmpaMonitor.h"
 #include "VoltageMonitor.h"
 #include "SpikeMonitor.h"
 #include "BinarySpikeMonitor.h"

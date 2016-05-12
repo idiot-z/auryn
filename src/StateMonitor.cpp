@@ -30,62 +30,63 @@ using namespace auryn;
 
 StateMonitor::StateMonitor(SpikingGroup * source, NeuronID id, std::string statename, std::string filename, AurynDouble sampling_interval)  
 {
-	init(source,id,statename,filename,sampling_interval/dt);
-}
 
-StateMonitor::StateMonitor(auryn_vector_float * state, NeuronID id, std::string filename, AurynDouble sampling_interval)
-{
-	if ( id >= state->size ) return; // do not register if neuron is out of vector range
-
-	Monitor::init(filename);
-	auryn::sys->register_monitor(this);
-	src = NULL;
-	nid = id;
-	target_variable = state->data+nid;
-	set_stop_time(10.0);
-	ssize = sampling_interval/dt;
-	outfile << std::setiosflags(std::ios::fixed) << std::setprecision(6);
-}
-
-StateMonitor::StateMonitor(EulerTrace * trace, NeuronID id, std::string filename, AurynDouble sampling_interval)
-{
-	if ( id >= trace->get_state_ptr()->size ) return; // do not register if neuron is out of vector range
-
-	Monitor::init(filename);
-	auryn::sys->register_monitor(this);
-	src = NULL;
-	nid = id;
-	target_variable = trace->get_state_ptr()->data+nid;
-	set_stop_time(10.0);
-	ssize = sampling_interval/dt;
-	outfile << std::setiosflags(std::ios::fixed) << std::setprecision(6);
-}
-
-void StateMonitor::init(SpikingGroup * source, NeuronID id, std::string statename, std::string filename, AurynTime stepsize)
-{
 	if ( !source->localrank(id) ) return; // do not register if neuron is not on the local rank
 
-
-	Monitor::init(filename);
+	init(filename, sampling_interval);
 	auryn::sys->register_monitor(this);
 	src = source;
 	nid = src->global2rank(id);
-	set_stop_time(10.0);
 
 	if ( nid >= src->get_rank_size() ) {
 		auryn::logger->msg("Error: StateMonitor trying to read from non-existing neuron.",ERROR);
 		throw AurynStateVectorException();
 	}
 
-	ssize = stepsize;
-	if ( ssize < 1 ) ssize = 1;
-
+	// TODO test if state exists -- use find_state_vector instead .. 
 	if ( source->evolve_locally() ) {
 		target_variable = src->get_state_vector(statename)->data+nid;
 	} else {
 		nid = src->get_rank_size() + 1;
 	}
+}
+
+StateMonitor::StateMonitor(auryn_vector_float * state, NeuronID id, std::string filename, AurynDouble sampling_interval)
+{
+	if ( id >= state->size ) return; // do not register if neuron is out of vector range
+
+	init(filename, sampling_interval);
+
+	auryn::sys->register_monitor(this);
+	src = NULL;
+	nid = id;
+	target_variable = state->data+nid;
+}
+
+StateMonitor::StateMonitor(EulerTrace * trace, NeuronID id, std::string filename, AurynDouble sampling_interval)
+{
+	if ( id >= trace->get_state_ptr()->size ) return; // do not register if neuron is out of vector range
+
+	init(filename, sampling_interval);
+
+	auryn::sys->register_monitor(this);
+	src = NULL;
+	nid = id;
+	target_variable = trace->get_state_ptr()->data+nid;
+}
+
+void StateMonitor::init(std::string filename, AurynDouble sampling_interval)
+{
+	Monitor::init(filename);
 	outfile << setiosflags(std::ios::fixed) << std::setprecision(6);
+
+	set_stop_time(10.0);
+	ssize = sampling_interval/dt;
+	if ( ssize < 1 ) ssize = 1;
+
+	enable_compression = true;
+	lastval = 0.0;
+	lastder = 0.0;
 }
 
 StateMonitor::~StateMonitor()
@@ -96,20 +97,35 @@ void StateMonitor::propagate()
 {
 	if ( auryn::sys->get_clock() < t_stop && auryn::sys->get_clock()%ssize==0  ) {
 		char buffer[255];
-		int n = sprintf(buffer,"%f %f\n",auryn::sys->get_time(), *target_variable); 
-		outfile.write(buffer,n); 
+		if ( enable_compression ) {
+			AurynState value = *target_variable;
+			AurynState deriv = value-lastval;
+
+			if ( deriv != lastder ) {
+				int n = sprintf(buffer,"%f %f\n",(auryn::sys->get_clock()-ssize)*dt, lastval); 
+				outfile.write(buffer,n);
+			}
+
+			lastval = value;
+			lastder = deriv;
+
+		} else {
+			int n = sprintf(buffer,"%f %f\n",auryn::sys->get_time(), *target_variable); 
+			outfile.write(buffer,n); 
+		}
 	}
 }
 
 void StateMonitor::set_stop_time(AurynDouble time)
+{ 
+	AurynDouble stoptime = std::min( time, std::numeric_limits<AurynTime>::max()*dt );
+	t_stop = stoptime/dt;
+}
+
+void StateMonitor::record_for(AurynDouble time)
 {
 	if (time < 0) {
 		auryn::logger->msg("Warning: Negative stop times not supported -- ingoring.",WARNING);
 	} 
 	else t_stop = auryn::sys->get_clock() + time/dt;
-}
-
-void StateMonitor::record_for(AurynDouble time)
-{
-	set_stop_time(time);
 }

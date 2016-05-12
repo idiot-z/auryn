@@ -27,6 +27,7 @@
 #define GABAMONITOR_H_
 
 #include "auryn_definitions.h"
+#include "AurynVector.h"
 #include "Monitor.h"
 #include "System.h"
 #include "Connection.h"
@@ -40,6 +41,7 @@ namespace auryn {
 	{
 	protected:
 		NeuronGroup * src;
+		AurynStateVector * g_gaba;
 		NeuronID nid;
 		AurynTime ssize;
 		void init(NeuronGroup * source, NeuronID id, std::string filename, AurynTime stepsize);

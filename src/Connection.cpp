@@ -82,6 +82,20 @@ std::string Connection::get_name()
 	return connection_name;
 }
 
+std::string Connection::get_file_name()
+{
+	std::string filename (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__);
+	return filename;
+}
+
+std::string Connection::get_log_name()
+{
+	std::stringstream oss;
+	oss << get_name() << " ("
+		<< get_file_name() << "): ";
+	return oss.str();
+}
+
 TransmitterType Connection::get_transmitter()
 {
 	return trans;
@@ -93,21 +107,21 @@ void Connection::set_transmitter(TransmitterType transmitter)
 	if ( dst->evolve_locally() ) {
 		switch ( transmitter ) {
 			case GABA:
-				set_transmitter(dst->get_gaba_ptr()->data);
+				set_transmitter(dst->get_state_vector("g_gaba")->data);
 				break;
 			case MEM:
-				set_transmitter(dst->get_mem_ptr()->data);
+				set_transmitter(dst->get_state_vector("mem")->data);
 				break;
 			case CURSYN:
-				set_transmitter(dst->get_cursyn_ptr()->data);
+				set_transmitter(dst->get_state_vector("g_cursyn")->data);
 				break;
 			case NMDA:
-				set_transmitter(dst->get_nmda_ptr()->data);
+				set_transmitter(dst->get_state_vector("g_nmda")->data);
 				break;
 			case GLUT:
 			case AMPA:
 			default:
-				set_transmitter(dst->get_ampa_ptr()->data);
+				set_transmitter(dst->get_state_vector("g_ampa")->data);
 		}
 	} else set_transmitter((AurynWeight *)NULL);
 }
@@ -182,12 +196,12 @@ void Connection::add_number_of_spike_attributes(int x)
 
 SpikeContainer * Connection::get_pre_spikes()
 {
-	src->get_spikes();
+	return src->get_spikes();
 }
 
 SpikeContainer * Connection::get_post_spikes()
 {
-	dst->get_spikes_immediate();
+	return dst->get_spikes_immediate();
 }
 
 

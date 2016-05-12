@@ -29,6 +29,7 @@
 #define VOLTAGEMONITOR_PASTED_SPIKE_HEIGHT 20e-3
 
 #include "auryn_definitions.h"
+#include "AurynVector.h"
 #include "Monitor.h"
 #include "System.h"
 #include "Connection.h"
@@ -49,7 +50,6 @@ class VoltageMonitor : protected Monitor
 private:
 	/*! Global neuron id to record from */
 	NeuronID gid;
-
 
 protected:
 	/*! The source neuron group to record from */

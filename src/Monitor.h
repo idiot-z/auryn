@@ -27,6 +27,7 @@
 #define MONITOR_H_
 
 #include "auryn_definitions.h"
+#include "AurynVector.h"
 #include <fstream>
 #include <string>
 
@@ -71,6 +72,9 @@ namespace auryn {
 	public:
 		/*! \brief Standard active switch */
 		bool active;
+
+		/*! \brief Flush to file */
+		void flush();
 
 		/*! \brief Standard constructor */
 		Monitor();

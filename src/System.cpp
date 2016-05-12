@@ -38,6 +38,7 @@ void System::init() {
 	online_rate_monitor_id = 0; 
 	online_rate_monitor_state = 0.0;
 
+	last_elapsed_time = -1.0;
 
 	progressbar_update_interval = PROGRESSBAR_DEFAULT_UPDATE_INTERVAL;
 
@@ -59,6 +60,15 @@ void System::init() {
 	oss.str("");
 	oss << "Current NeuronID and sync are good for simulations up to "
 		<< std::numeric_limits<NeuronID>::max()/MINDELAY << " cells.";
+	auryn::logger->msg(oss.str(),VERBOSE);
+
+
+	oss.str("");
+	if(__builtin_cpu_supports("avx2")) {
+		oss << "System supports AVX2";
+	} else {
+		oss << "System does not support AVX2";
+	}
 	auryn::logger->msg(oss.str(),VERBOSE);
 
 }
@@ -446,6 +456,8 @@ bool System::run(AurynTime starttime, AurynTime stoptime, AurynFloat total_time,
 	double elapsed  = difftime(t_now,t_sim_start);
 #endif 
 
+	last_elapsed_time = elapsed;
+
 	oss.str("");
 	oss << "Simulation finished. Ran for " 
 		<< elapsed 
@@ -785,13 +797,18 @@ void System::evolve_online_rate_monitor()
 	}
 }
 
-void System::set_online_rate_monitor_id( int id )
+void System::set_online_rate_monitor_id( unsigned int id )
 {
 	online_rate_monitor_state = 0.0;
 	if ( id < spiking_groups.size() ) 
 		online_rate_monitor_id = id;
 	else
 		online_rate_monitor_id = -1;
+}
+
+AurynDouble System::get_last_elapsed_time()
+{
+	return last_elapsed_time;
 }
 
 #ifdef CODE_COLLECT_SYNC_TIMING_STATS
@@ -811,6 +828,7 @@ AurynDouble System::get_elapsed_wall_time()
 	AurynDouble temp = MPI_Wtime();
 	return temp-measurement_start;
 }
+
 
 void System::reset_sync_time()
 {

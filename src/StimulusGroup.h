@@ -28,6 +28,7 @@
 #define STIMULUSGROUP_H_
 
 #include "auryn_definitions.h"
+#include "AurynVector.h"
 #include "System.h"
 #include "SpikingGroup.h"
 
@@ -195,6 +196,9 @@ public:
 
 	/*! \brief returns the last action (stim on/off) time in units of AurynTime */
 	AurynTime get_last_action_time();
+
+	/*! \brief returns the next action (stim on/off) time in units of AurynTime */
+	AurynTime get_next_action_time();
 
 	/*! \brief returns the index of the current (or last -- if not active anymore) active stimulus */
 	unsigned int get_cur_stim();

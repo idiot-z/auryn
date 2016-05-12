@@ -27,6 +27,7 @@
 #define SYSTEM_H_
 
 #include "auryn_definitions.h"
+#include "AurynVector.h"
 #include "SpikingGroup.h"
 #include "Connection.h"
 #include "Monitor.h"
@@ -74,6 +75,9 @@ namespace auryn {
 
 		double simulation_time_realtime_ratio;
 
+		/*! Store elapsed time for last call of run */
+		double last_elapsed_time;
+
 		int online_rate_monitor_id;
 		double online_rate_monitor_tau;
 		double online_rate_monitor_mul;
@@ -102,6 +106,7 @@ namespace auryn {
 
 		/*! Propagates the spikes and evolves connection objects. */
 		void propagate();
+
 
 		/*! Performs integration of Connection objects. 
 		 * Since this is independent of the SpikingGroup evolve we 
@@ -137,10 +142,13 @@ namespace auryn {
 		 * progressbar (this typically is reflected by the order in
 		 * which you define the SpikingGroup and NeuronGroup classes. It starts
 		 * numbering from 0.). */
-		void set_online_rate_monitor_id( int id=0 );
+		void set_online_rate_monitor_id( unsigned int id=0 );
 
 		/*! Sets the timeconstant to compute the online rate average for the status bar. */
 		void set_online_rate_monitor_tau( AurynDouble tau=100e-3 );
+
+		/*! Returns last elapsed time. */
+		double get_last_elapsed_time();
 
 		/*! \brief Saves network state to a netstate file
 		 *

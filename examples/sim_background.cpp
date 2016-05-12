@@ -51,6 +51,7 @@ int main(int ac, char* av[])
 	double kappa = 3.;
 
 	bool quiet = false;
+	bool verbose = false;
 	bool scaling = false;
 	bool wmatdump = false;
 	bool loadbalance = false;
@@ -118,6 +119,7 @@ int main(int ac, char* av[])
         desc.add_options()
             ("help", "produce help message")
             ("quiet", "quiet mode")
+            ("verbose", "verbose mode")
             ("scaling", "scaling mode")
             ("balance", "activate load balance")
             ("load", po::value<std::string>(), "input weight matrix")
@@ -178,6 +180,10 @@ int main(int ac, char* av[])
 
         if (vm.count("quiet")) {
 			quiet = true;
+        } 
+
+        if (vm.count("verbose")) {
+			verbose = true;
         } 
 
         if (vm.count("scaling")) {
@@ -476,7 +482,10 @@ int main(int ac, char* av[])
 
 	sprintf(strbuf, "%s/%s_e%.2et%.2f%s.%d.log", dir.c_str(), file_prefix, eta, tau_hom, label.c_str(), world.rank());
 	std::string logfile = strbuf;
-	logger = new Logger(logfile,world.rank(),PROGRESS,EVERYTHING);
+
+	LogMessageType log_level_file = PROGRESS;
+	if ( verbose ) log_level_file = EVERYTHING;
+	logger = new Logger(logfile,world.rank(),PROGRESS,log_level_file);
 
 	sys = new System(&world);
 	// boost::filesystem::path p = av[0];
@@ -844,6 +853,17 @@ if ( patfile != "" ) {
 	killfile.open(strbuf);
 	killfile << sys->get_time()-primetime << std::endl;
 	killfile.close();
+
+
+	if ( world.rank() == 0 ) {
+		logger->msg("Saving elapsed time ..." ,PROGRESS,true);
+		char filenamebuf [255];
+		sprintf(filenamebuf, "%s/elapsed.dat", dir.c_str());
+		std::ofstream timefile;
+		timefile.open(filenamebuf);
+		timefile << sys->get_last_elapsed_time() << std::endl;
+		timefile.close();
+	}
 
 	logger->msg("Freeing ...",PROGRESS,true);
 	delete sys;
