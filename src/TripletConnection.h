@@ -158,7 +158,6 @@ public:
 	void free();
 
 	void set_hom_trace(AurynFloat freq);
-	void set_a_minus(AurynFloat a_m);
 
 	virtual void propagate();
 	virtual void evolve();
