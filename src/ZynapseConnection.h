@@ -106,12 +106,6 @@ protected:
         void integrate();
 
         void noise(NeuronID z);
-        void compute_diffs();
-
-	// temporary state vector
-	AurynWeight * temp_state;
-
-        // AurynWeight xtow(AurynWeight value);
 
 public:
 

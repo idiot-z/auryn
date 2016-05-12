@@ -86,13 +86,13 @@ void ZynapseConnection::free()
 {
         delete dist;
         delete die;
-	delete [] temp_state;
 }
 
-void ZynapseConnection::finalize() {
-	// will compute backward matrix on the new elements/data vector of the w
-	DuplexConnection::finalize();
-}
+// TODO already in TripletConnection ?
+// void ZynapseConnection::finalize() {
+// 	// will compute backward matrix on the new elements/data vector of the w
+// 	DuplexConnection::finalize();
+// }
 
 void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, AurynFloat a_p)
 {
@@ -112,7 +112,7 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 
         set_plast_constants(a_m, a_p);
 
-        euler[0] = TUPD/TAUX; // TODO adjust
+        euler[0] = TUPD/TAUX;
         euler[1] = TUPD/TAUY;
         euler[2] = TUPD/TAUZ;
 
@@ -128,21 +128,13 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 	// Set number of synaptic states
 	w->set_num_synapse_states(3);
 
-	// TODO put in w->set_num_states() ?
 	// copy all the elements from z=0 to z=1,2
 	w->state_set_all(w->get_state_begin(1),0.0);
 	w->state_set_all(w->get_state_begin(2),0.0);
 	w->state_add(w->get_state_begin(0),w->get_state_begin(1));
 	w->state_add(w->get_state_begin(0),w->get_state_begin(2));
 
-	/* Define temporary state vectors */
-	// TODO what size?
-	//      check if def in .h
-	temp_state = new AurynWeight[w->get_nonzero()];
-	diff_state = new AurynWeight[2*w->get_nonzero()];
-
 	// Run finalize again to rebuild backward matrix
-	// TODO finalize?
 	finalize(); 
 }
 
@@ -179,17 +171,6 @@ void ZynapseConnection::integrate()
 	}
 	// TODO add proteins to neurongroup
         dst->update_prot();
-}
-
-void ZynapseConnection::compute_diffs()
-{
-	AurynWeight * x = w->get_state_begin(0),
-		* y = w->get_state_begin(1),
-		* z = w->get_state_begin(2),
-		* dxy = diff_state,
-		* dyz = diff_state+w->get_nonzero();
-	w->state_sub(x,y,dxy);
-	w->state_sub(y,z,dyz);
 }
 
 // TODO adapt (careful with constants due to w instead of x)
@@ -231,11 +212,6 @@ void ZynapseConnection::evolve()
         if (sys->get_clock()%timestep_synapses==0)
                 integrate();
 }
-
-// AurynWeight ZynapseConnection::wtox(AurynWeight value)
-// {
-//         return (value*2/wo-(kw+1))/(kw-1);
-// }
 
 void ZynapseConnection::random_data_potentiation(AurynFloat z_up, bool reset)
 {
@@ -326,15 +302,19 @@ void ZynapseConnection::seed(int s)
 //         std = sqrt(sum2/count-pow(mean,2));
 // }
 
-// TODO adapt to w
+// TODO potentiate z=1,2 (add z support to ComplexMatrix)
 void ZynapseConnection::potentiate(NeuronID i)
 {
-  for (int z=0; z<3; z++)
-    gsl_vector_float_set(layers[z],i,1.);
+  // for (int z=0; z<3; z++)
+	w->state_data(i,w->get_max_weight());
 }
 
 void ZynapseConnection::potentiate()
 {
-        for (int z=0; z<3; z++)
-                gsl_vector_float_set_all(layers[z],1.);
+	aurynWeight wmax = get_max_weight();
+        for (int z=0; z<3; z++) {
+		w->state_set_all(w->get_state_begin(0),wmax);
+		w->state_set_all(w->get_state_begin(1),wmax);
+		w->state_set_all(w->get_state_begin(2),wmax);
+	}
 }
