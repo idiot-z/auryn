@@ -45,6 +45,10 @@ void NeuronGroup::init()
 		g_gaba = get_state_vector("g_gaba");
 		g_nmda = get_state_vector("g_nmda");
 
+		protein_timestamp = 0;
+		protein = 0;
+		dopamine = false;
+
 #ifndef CODE_ALIGNED_SSE_INSTRUCTIONS
 		// checking via default if those arrays are aligned
 		if ( auryn_AlignOffset( mem->size, mem->data, sizeof(float), 16) 
@@ -155,4 +159,41 @@ void NeuronGroup::set_state(std::string name, AurynState val)
 	AurynStateVector * tmp = find_state_vector(name);
 	if (tmp) tmp->set_all(val);
 	else { logger->warning("State not found."); }
+}
+
+void NeuronGroup::update_protein()
+{
+  AurynTime timediff = *clock_ptr-protein_timestamp;
+  if (dopamine)
+    protein = (protein-1.)*exp(-dt*timediff/TAU_UP)+1.;
+  else
+    protein *= exp(-dt*timediff/TAU_DOWN);
+  protein_timestamp = *clock_ptr;
+}
+
+void NeuronGroup::dopamine_on()
+{
+  update_protein();
+  dopamine = true;
+}
+
+void NeuronGroup::dopamine_off()
+{
+  update_protein();
+  dopamine = false;
+}
+
+void NeuronGroup::set_protein(AurynFloat value)
+{
+  protein = value;
+}
+
+AurynFloat NeuronGroup::get_protein()
+{
+  return protein;
+}
+
+AurynFloat * NeuronGroup::get_protein_ptr()
+{
+  return &protein;
 }
