@@ -80,7 +80,7 @@ private:
 	void init(AurynFloat wo, AurynFloat a_m, AurynFloat a_p,
 		  AurynFloat k_w);
 
-        static boost::mt19937 gen;
+        static boost::mt19937 zynapse_connection_gen;
         boost::normal_distribution<> *dist;
         boost::variate_generator<boost::mt19937&, boost::normal_distribution<> > * die;
 
@@ -137,8 +137,12 @@ public:
 
         virtual ~ZynapseConnection();
 
+	virtual void finalize();
+
         virtual void propagate();
         virtual void evolve();
+
+	LinearTrace *tr_gxy;
 
         void random_data_potentiation(AurynFloat z_up, bool reset=false);
         void count_states(AurynInt *states);
@@ -147,7 +151,8 @@ public:
 
         void set_plast_constants(AurynFloat a_m, AurynFloat a_p);
         void potentiate(NeuronID i);
-        // void potentiate();
+        void potentiate();
+        void depress();
 //         virtual void stats(AurynFloat &mean, AurynFloat &std);
 //         void stats(AurynFloat &mean, AurynFloat &std, vector<NeuronID> * presynaptic_list);
 };

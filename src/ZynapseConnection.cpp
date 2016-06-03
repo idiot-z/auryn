@@ -25,8 +25,12 @@
 
 #include "ZynapseConnection.h"
 
-boost::mt19937 ZynapseConnection::gen = boost::mt19937();
-// TODO has_been_seeded ?
+// TODO add loggers, copyright?
+
+using namespace auryn;
+
+boost::mt19937 ZynapseConnection::zynapse_connection_gen = boost::mt19937();
+bool ZynapseConnection::has_been_seeded = false;
 
 /********************
  *** constructors ***
@@ -86,13 +90,8 @@ void ZynapseConnection::free()
 {
         delete dist;
         delete die;
+	delete tr_gxy;
 }
-
-// TODO already in TripletConnection ?
-// void ZynapseConnection::finalize() {
-// 	// will compute backward matrix on the new elements/data vector of the w
-// 	DuplexConnection::finalize();
-// }
 
 void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, AurynFloat a_p)
 {
@@ -100,15 +99,16 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 
         dist = new boost::normal_distribution<> (0., 1.);
         die = new boost::variate_generator<boost::mt19937&, boost::normal_distribution<> >
-		(gen, *dist);
-	seed(communicator->rank());
+		(zynapse_connection_gen, *dist);
+	if (!has_been_seeded)
+		seed(12345*auryn::communicator->rank());
 
 	set_min_weight(wo);
 	set_max_weight(k_w*wo);
 
-	tr_pre->set_timeconstant(TAU_PRE);
-	tr_post->set_timeconstant(TAU_POST);
-	tr_post2->set_timeconstant(TAU_LONG);
+        tr_pre = src->get_pre_trace(TAU_PRE);
+        tr_post = dst->get_post_trace(TAU_POST);
+        tr_post2 = dst->get_post_trace(TAU_LONG);
 
         set_plast_constants(a_m, a_p);
 
@@ -144,6 +144,11 @@ void ZynapseConnection::set_plast_constants(AurynFloat a_m, AurynFloat a_p)
         A3_plus = a_p/TAU_PRE/TAU_LONG;
 }
 
+void ZynapseConnection::finalize() {
+        TripletConnection::finalize();
+	tr_gxy = new LinearTrace(get_nonzero(), TAUG);
+}
+
 /************
  *** body ***
  ************/
@@ -169,11 +174,9 @@ void ZynapseConnection::integrate()
 				  TILT*dst->get_protein()*yzi
 				  ) + eta*(*die)();				  
 	}
-	// TODO add proteins to neurongroup
-        dst->update_prot();
+        dst->update_protein();
 }
 
-// TODO adapt (careful with constants due to w instead of x)
 // TODO comment
 /*! This function implements what happens to synapes transmitting a
  *  spike to neuron 'post'. */
@@ -182,12 +185,13 @@ void ZynapseConnection::dw_pre(NeuronID * post, AurynWeight * weight)
         // translate post id to local id on rank: translated_spike
         NeuronID translated_spike = dst->global2rank(*post),
 		data_ind = post-fwd_ind;
+	// NOTE get_data(data_ind) = get_data(post) !
         AurynDouble dw = hom_fudge*tr_post->get(translated_spike),
-                reset = gsl_vector_float_get(layers[2],data_ind)-*x; // TODO
+                reset = w->get_data(post,2)-*weight;
         if (reset<0) dw *= 1-C_RESET*reset;
         if (dw>1) dw = 1;
-        if (reset>0) tr_gxy->add(data_ind, dw*(1.-tr_gxy->get(data_ind))); // TODO add trace
-        dw *= (1+*weight); // TODO whats this
+        if (reset>0) tr_gxy->add(data_ind, dw*(1.-tr_gxy->get(data_ind)));
+        dw *= (*weight-wmin);
         *weight -= dw;
 }
 
@@ -199,11 +203,11 @@ void ZynapseConnection::dw_post(NeuronID * pre, NeuronID post, AurynWeight * wei
         // the propagate_backward function below.
 	NeuronID data_ind = bkw_data[pre-bkw_ind]-fwd_data;
         AurynDouble dw = A3_plus*tr_pre->get(*pre)*tr_post2->get(post),
-                reset = gsl_vector_float_get(layers[2],data_ind)-*x;
+                reset = w->get_data(data_ind,2)-*weight;
         if (reset>0) dw *= 1+C_RESET*reset;
         if (dw>1) dw = 1;
         if (reset<0) tr_gxy->add(data_ind,dw*(1.-tr_gxy->get(data_ind)));
-        dw *= (1-*weight);
+        dw *= (wmax-*weight);
         *weight += dw;
 }
 
@@ -216,14 +220,12 @@ void ZynapseConnection::evolve()
 void ZynapseConnection::random_data_potentiation(AurynFloat z_up, bool reset)
 {
         if (reset) {
-		AurynWeight weight = get_min_weight();
-		// TODO replace with set(z)
-                set_weight(weight); set_tag(weight); set_scaffold(weight);
+                depress();
         }
         if (z_up) {
-		// TODO check in sparseC
                 boost::exponential_distribution<> exp_dist(z_up);
-                boost::variate_generator<boost::mt19937&, boost::exponential_distribution<> > exp_die(gen, exp_dist);
+                boost::variate_generator<boost::mt19937&, boost::exponential_distribution<> >
+			exp_die(zynapse_connection_gen, exp_dist);
 
                 AurynLong x = (AurynLong) exp_die(), y;
                 while (x < get_nonzero() ) {
@@ -251,12 +253,16 @@ void ZynapseConnection::random_data_potentiation(AurynFloat z_up, bool reset)
 // TODO check where is RANDOM_SEED + gettimeofday
 void ZynapseConnection::seed(int s)
 {
-#ifdef RANDOM_SEED
-        timeval ss;
-        gettimeofday(&ss,NULL);
-        s += ss.tv_usec-100*(ss.tv_usec/100);
-#endif
-        gen.seed(s);
+// #ifdef RANDOM_SEED
+//         timeval ss;
+//         gettimeofday(&ss,NULL);
+//         s += ss.tv_usec-100*(ss.tv_usec/100);
+// #endif
+	std::stringstream oss;
+	oss << get_log_name() << "Seeding with " << s;
+	auryn::logger->msg(oss.str(),VERBOSE);
+	zynapse_connection_gen.seed(s); 
+	has_been_seeded = true;
 }
 
 // TODO still exists?
@@ -302,19 +308,24 @@ void ZynapseConnection::seed(int s)
 //         std = sqrt(sum2/count-pow(mean,2));
 // }
 
-// TODO potentiate z=1,2 (add z support to ComplexMatrix)
 void ZynapseConnection::potentiate(NeuronID i)
 {
-  // for (int z=0; z<3; z++)
-	w->state_data(i,w->get_max_weight());
+  for (int z=0; z<3; z++)
+	  w->state_data(i+z*w->get_nonzero(),get_max_weight());
 }
 
 void ZynapseConnection::potentiate()
 {
 	aurynWeight wmax = get_max_weight();
         for (int z=0; z<3; z++) {
-		w->state_set_all(w->get_state_begin(0),wmax);
-		w->state_set_all(w->get_state_begin(1),wmax);
-		w->state_set_all(w->get_state_begin(2),wmax);
+		w->state_set_all(w->get_state_begin(z),wmax);
+	}
+}
+
+void ZynapseConnection::depress()
+{
+	aurynWeight wmin = get_min_weight();
+        for (int z=0; z<3; z++) {
+		w->state_set_all(w->get_state_begin(z),wmin);
 	}
 }
