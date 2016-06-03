@@ -4,8 +4,8 @@
 *.l[oa]
 */.libs
 
-# Ignore docs
-docs/*
+# Ignore doc
+doc/*
 # Ignore emacs backups
 *~
 # Ignore stuff in the build dirs except the makefiles
