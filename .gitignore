@@ -6,6 +6,7 @@
 
 # Ignore doc
 doc/*
+!doc/auryn_logo_small.png
 # Ignore emacs backups
 *~
 # Ignore stuff in the build dirs except the makefiles

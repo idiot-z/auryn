@@ -311,7 +311,7 @@ void ZynapseConnection::seed(int s)
 void ZynapseConnection::potentiate(NeuronID i)
 {
   for (int z=0; z<3; z++)
-	  w->state_data(i+z*w->get_nonzero(),get_max_weight());
+	  w->set_data(i,get_max_weight(),z);
 }
 
 void ZynapseConnection::potentiate()
