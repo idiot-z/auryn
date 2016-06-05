@@ -62,6 +62,11 @@ void System::init() {
 		<< std::numeric_limits<NeuronID>::max()/MINDELAY << " cells.";
 	auryn::logger->msg(oss.str(),VERBOSE);
 
+#ifndef NDEBUG
+	oss.str("");
+	oss << "Warning debugging support is compiled and will impair performance.";
+	auryn::logger->warning(oss.str());
+#endif 
 
 	oss.str("");
 	if(__builtin_cpu_supports("avx2")) {
@@ -737,7 +742,9 @@ void System::load_network_state(std::string basename)
 
 		std::stringstream oss;
 		oss << "Loading connection "
-			<<  i ;
+			<<  i 
+			<< ": " 
+			<< connections[i]->get_name();
 		auryn::logger->msg(oss.str(),VERBOSE);
 
 		ia >> *(connections[i]);
@@ -749,7 +756,9 @@ void System::load_network_state(std::string basename)
 
 		std::stringstream oss;
 		oss << "Loading group "
-			<<  i ;
+			<<  i 
+			<< ": "
+			<< spiking_groups[i]->get_name();
 		auryn::logger->msg(oss.str(),VERBOSE);
 
 		ia >> *(spiking_groups[i]);
@@ -809,6 +818,12 @@ void System::set_online_rate_monitor_id( unsigned int id )
 AurynDouble System::get_last_elapsed_time()
 {
 	return last_elapsed_time;
+}
+
+void System::flush_monitors()
+{
+	for ( unsigned int i = 0 ; i < monitors.size() ; ++i )
+		monitors[i]->flush();
 }
 
 #ifdef CODE_COLLECT_SYNC_TIMING_STATS

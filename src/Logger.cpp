@@ -105,6 +105,11 @@ void Logger::msg( std::string text, LogMessageType type, bool global, int line, 
 
 void Logger::info( std::string text )
 {
+	msg(text, INFO);
+}
+
+void Logger::notification( std::string text )
+{
 	msg(text, NOTIFICATION);
 }
 
@@ -119,6 +124,11 @@ void Logger::error( std::string text )
 }
 
 void Logger::verbose( std::string text, bool global, int line, std::string srcfile )
+{
+	debug(text, global, line, srcfile );
+}
+
+void Logger::debug( std::string text, bool global, int line, std::string srcfile )
 {
 	msg(text, VERBOSE, global, line, srcfile );
 }

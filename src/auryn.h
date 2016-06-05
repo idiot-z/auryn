@@ -66,13 +66,13 @@
 
 // Spiking and Neuron group definitions
 #include "AIF2Group.h"
-#include "IafPscDeltaGroup.h"
 #include "IFGroup.h"
 #include "AIFGroup.h"
 #include "AdExGroup.h"
 #include "CubaIFGroup.h"
 #include "TIFGroup.h"
-#include "SIFGroup.h"
+#include "IafPscDeltaGroup.h"
+#include "IafPscExpGroup.h"
 #include "SpikingGroup.h"
 #include "NeuronGroup.h"
 #include "PoissonGroup.h"
@@ -93,7 +93,6 @@
 
 // Monitor and stimulator definitions
 #include "Monitor.h"
-#include "GabaMonitor.h"
 #include "VoltageMonitor.h"
 #include "SpikeMonitor.h"
 #include "BinarySpikeMonitor.h"

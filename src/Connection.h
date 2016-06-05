@@ -80,9 +80,15 @@ protected:
 		ar & m_rows & n_cols & connection_name;
 	}
 
-	SpikingGroup * src;
-	NeuronGroup * dst;
 	TransmitterType trans;
+
+	AurynStateVector * target_state_vector;
+
+	/*! \brief A more direct reference on the first element of the target_state_vector 
+	 *
+	 * The logic of connection is that when the simulation starts *target points to the first element of an array
+	 * with AurynWeight type which has the post_size of the target group. Each presynaptic spike will then trigger 
+	 * addition the values stored as weights in some weight matrix to that group. */
 	AurynFloat * target;
 
 	/*! \brief Number of spike attributes to expect with each spike transmitted through this connection.
@@ -97,6 +103,12 @@ protected:
 	void init(TransmitterType transmitter=GLUT);
 
 public:
+	/*! \brief Pointer to the source group of this connection */
+	SpikingGroup * src;
+
+	/*! \brief Pointer to the destination group of this connection */
+	NeuronGroup * dst;
+
 	Connection();
 	Connection(NeuronID rows, NeuronID cols);
 	Connection(SpikingGroup * source, NeuronGroup * destination, TransmitterType transmitter=GLUT, std::string name="Connection");
@@ -117,6 +129,9 @@ public:
 
 	/*! \brief Returns a string which is the combination of file and connection name for logging. */
 	std::string get_log_name();
+
+	/*! \brief Returns target state vector if one is defined  */
+	AurynStateVector * get_target_vector();
 
 	/*! \brief Get number of rows (presynaptic) in connection.
 	 *
@@ -140,7 +155,7 @@ public:
 	void set_transmitter(AurynWeight * ptr);
 
 	/*! \brief Sets target state of this connection directly via a StateVector */
-	void set_transmitter(auryn_vector_float * ptr);
+	void set_transmitter(AurynStateVector * ptr);
 
 	/*! \brief Sets target state of this connection as one of Auryn's default transmitter types */
 	void set_transmitter(TransmitterType transmitter);
@@ -248,7 +263,7 @@ BOOST_SERIALIZATION_ASSUME_ABSTRACT(Connection)
 inline void Connection::transmit(NeuronID id, AurynWeight amount) 
 {
 	NeuronID localid = dst->global2rank(id);
-	target[localid]+=amount;
+	target_state_vector->data[localid]+=amount;
 }
 }
 
