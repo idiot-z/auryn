@@ -84,6 +84,8 @@ private:
         boost::normal_distribution<> *dist;
         boost::variate_generator<boost::mt19937&, boost::normal_distribution<> > * die;
 
+	static bool has_been_seeded;
+
         void free();
 	virtual void finalize();
 
@@ -93,7 +95,7 @@ protected:
          * partner post. This function should be modified to define new spike based
          * plasticity rules.
          * @param post the postsynaptic cell from which the synaptic trace is read out*/
-        virtual void dw_pre(NeuronID * post, AurynWeight * weight);
+        virtual void dw_pre(const NeuronID * post, AurynWeight * weight);
 
         /*! Action on weight upon postsynaptic spike of cell post on connection
          * with presynaptic partner pre. This function should be modified to define
@@ -101,7 +103,7 @@ protected:
          * @param pre the presynaptic cell in question.
          * @param post the postsynaptic cell in question.
          */
-        virtual void dw_post(NeuronID * pre, NeuronID post, AurynWeight * weight);
+        virtual void dw_post(const NeuronID * pre, NeuronID post, AurynWeight * weight);
 
         void integrate();
 
@@ -136,8 +138,6 @@ public:
 			  TransmitterType transmitter=GLUT);
 
         virtual ~ZynapseConnection();
-
-	virtual void finalize();
 
         virtual void propagate();
         virtual void evolve();

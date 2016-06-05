@@ -146,7 +146,9 @@ void ZynapseConnection::set_plast_constants(AurynFloat a_m, AurynFloat a_p)
 
 void ZynapseConnection::finalize() {
         TripletConnection::finalize();
-	tr_gxy = new LinearTrace(get_nonzero(), TAUG);
+	// TODO ask Fried if correct clock
+	AurynTime *clk = auryn::sys->get_clock_ptr();
+	tr_gxy = new LinearTrace(get_nonzero(), TAUG, clk);
 }
 
 /************
@@ -180,7 +182,7 @@ void ZynapseConnection::integrate()
 // TODO comment
 /*! This function implements what happens to synapes transmitting a
  *  spike to neuron 'post'. */
-void ZynapseConnection::dw_pre(NeuronID * post, AurynWeight * weight)
+void ZynapseConnection::dw_pre(const NeuronID * post, AurynWeight * weight)
 {
         // translate post id to local id on rank: translated_spike
         NeuronID translated_spike = dst->global2rank(*post),
@@ -197,7 +199,7 @@ void ZynapseConnection::dw_pre(NeuronID * post, AurynWeight * weight)
 
 /*! This function implements what happens to synapes experiencing a
  *  backpropagating action potential from neuron 'pre'. */
-void ZynapseConnection::dw_post(NeuronID * pre, NeuronID post, AurynWeight * weight)
+void ZynapseConnection::dw_post(const NeuronID * pre, NeuronID post, AurynWeight * weight)
 {
         // at this point post was already translated to a local id in
         // the propagate_backward function below.
@@ -265,26 +267,7 @@ void ZynapseConnection::seed(int s)
 	has_been_seeded = true;
 }
 
-// TODO still exists?
-// void ZynapseConnection::stats(AurynFloat &mean, AurynFloat &std)
-// {
-//         NeuronID count = get_nonzero();
-//         AurynFloat sum = 0;
-//         AurynFloat sum2 = 0;
-//         float *x = gsl_data;
-//         for ( NeuronID i = 0 ; i < count ; ++i,++x ) {
-//                 sum += *x;
-//                 sum2 += pow(*x,2);
-//         }
-//         if ( count <= 1 ) {
-//                 mean = sum;
-//                 std = 0;
-//                 return;
-//         }
-//         mean = sum/count;
-//         std = sqrt(sum2/count-pow(mean,2));
-// }
-
+// TODO used in loggers?
 // void ZynapseConnection::stats(AurynFloat &mean, AurynFloat &std, vector<NeuronID> * presynaptic_list)
 // {
 //         NeuronID count = 0;
@@ -316,7 +299,7 @@ void ZynapseConnection::potentiate(NeuronID i)
 
 void ZynapseConnection::potentiate()
 {
-	aurynWeight wmax = get_max_weight();
+	AurynWeight wmax = get_max_weight();
         for (int z=0; z<3; z++) {
 		w->state_set_all(w->get_state_begin(z),wmax);
 	}
@@ -324,7 +307,7 @@ void ZynapseConnection::potentiate()
 
 void ZynapseConnection::depress()
 {
-	aurynWeight wmin = get_min_weight();
+	AurynWeight wmin = get_min_weight();
         for (int z=0; z<3; z++) {
 		w->state_set_all(w->get_state_begin(z),wmin);
 	}

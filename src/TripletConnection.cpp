@@ -144,7 +144,7 @@ AurynWeight TripletConnection::get_hom(NeuronID i)
 
 /*! This function implements what happens to synapes transmitting a
  *  spike to neuron 'post'. */
-void TripletConnection::dw_pre(NeuronID * post, AurynWeight * weight)
+void TripletConnection::dw_pre(const NeuronID * post, AurynWeight * weight)
 {
         // translate post id to local id on rank: translated_spike
         NeuronID translated_spike = dst->global2rank(*post);
@@ -157,7 +157,7 @@ void TripletConnection::dw_pre(NeuronID * post, AurynWeight * weight)
 
 /*! This function implements what happens to synapes experiencing a
  *  backpropagating action potential from neuron 'pre'. */
-void TripletConnection::dw_post(NeuronID * pre, NeuronID post, AurynWeight * weight)
+void TripletConnection::dw_post(const NeuronID * pre, NeuronID post, AurynWeight * weight)
 {
         // at this point post was already translated to a local id in
         // the propagate_backward function below.
