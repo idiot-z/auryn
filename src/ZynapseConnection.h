@@ -140,7 +140,6 @@ public:
 
         virtual ~ZynapseConnection();
 
-        virtual void propagate();
         virtual void evolve();
 
 	LinearTrace *tr_gxy;
