@@ -31,6 +31,7 @@
 
 #include "auryn_definitions.h"
 #include "TripletConnection.h"
+#include "LinearTrace.h"
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -153,7 +154,6 @@ public:
         void potentiate(NeuronID i);
         void potentiate();
         void depress();
-//         virtual void stats(AurynFloat &mean, AurynFloat &std);
 //         void stats(AurynFloat &mean, AurynFloat &std, vector<NeuronID> * presynaptic_list);
 };
 
