@@ -277,7 +277,7 @@ void ZynapseConnection::depress()
 
 void ZynapseConnection::set_noise(AurynFloat level)
 {
-        eta = wo*(k_w-1)*sqrt(level*TUPD)/2;
+        eta = (wmax-wmin)*sqrt(level*TUPD)/2;
 }
 
 void ZynapseConnection::set_tau(AurynFloat level, NeuronID z)

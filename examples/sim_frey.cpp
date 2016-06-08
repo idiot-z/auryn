@@ -27,9 +27,6 @@ namespace mpi = boost::mpi;
 
 using namespace auryn;
 
-// TODO pattern creation
-#define JIT 0.003
-
 int main(int ac, char* av[])
 {
 	// TODO dir
@@ -188,12 +185,12 @@ int main(int ac, char* av[])
                 }
 
         }
-        catch(exception& e) {
-                cerr << "error: " << e.what() << "\n";
+        catch(std::exception& e) {
+		std::cerr << "error: " << e.what() << "\n";
                 return 1;
         }
         catch(...) {
-                cerr << "Exception of unknown type!\n";
+		std::cerr << "Exception of unknown type!\n";
         }
 
         // BEGIN Global stuff
@@ -214,8 +211,7 @@ int main(int ac, char* av[])
         msg =  "Setting up neuron groups ...";
         logger->msg(msg,PROGRESS,true);
 
-        // TODO input file
-        sprintf(strbuf, "%s/%s", dir.c_str(), file_prefix);
+        sprintf(strbuf, "%s/%s_%s.ras", dir.c_str(), file_prefix, protocol.c_str());
         FileInputGroup * tetanus = new FileInputGroup(n_in, strbuf);
 
         AIFGroup * neuron = new AIFGroup(n_out);
@@ -225,7 +221,7 @@ int main(int ac, char* av[])
 
         ZynapseConnection *con = \
                 new ZynapseConnection(tetanus, neuron, weight, sparseness, am, ap);
-        con->random_data_consolidation(zup);
+        con->random_data_potentiation(zup);
         con->set_noise(noise);
         con->set_tau(tau,0);con->set_tau(tau,1);con->set_tau(tau,2);
 
@@ -233,13 +229,13 @@ int main(int ac, char* av[])
         logger->msg(msg,PROGRESS,true);
 
 	sprintf(strbuf, "%s/%s_%s_x.%d.wgs", dir.c_str(), file_prefix, protocol.c_str());
-        WeightStatsMonitor * wsmon = \
+        WeightStatsMonitor * wsmon_x = \
                 new WeightStatsMonitor(con, strbuf, monitor_time, 0);
 	sprintf(strbuf, "%s/%s_%s_y.%d.wgs", dir.c_str(), file_prefix, protocol.c_str());
-        WeightStatsMonitor * wsmon = \
+        WeightStatsMonitor * wsmon_y = \
                 new WeightStatsMonitor(con, strbuf, monitor_time, 1);
 	sprintf(strbuf, "%s/%s_%s_z.%d.wgs", dir.c_str(), file_prefix, protocol.c_str());
-        WeightStatsMonitor * wsmon = \
+        WeightStatsMonitor * wsmon_z = \
                 new WeightStatsMonitor(con, strbuf, monitor_time, 2);
 
 	// TODO to count states (directly on data files): if x_i>0 s+=2^i
@@ -256,9 +252,9 @@ int main(int ac, char* av[])
 	}
 
 	sprintf(strbuf, "%s/%s_%s.%d.ras", dir.c_str(), file_prefix, protocol.c_str());
-        SpikeMonitor * smon = new SpikeMonitor(sys, neuron, strbuf);
+        SpikeMonitor * smon = new SpikeMonitor(neuron, strbuf);
 	sprintf(strbuf, "%s/%s_%s_stimulus.%d.ras", dir.c_str(), file_prefix, protocol.c_str());
-        SpikeMonitor * smon_stim = new SpikeMonitor(sys, tetanus, strbuf);
+        SpikeMonitor * smon_stim = new SpikeMonitor(tetanus, strbuf);
 
 	msg = "Simulating ...";
 	logger->msg(msg,PROGRESS,true);
@@ -270,7 +266,7 @@ int main(int ac, char* av[])
         tetanus->active = true;
         if (!sys->run(time, false) )
                 errcode = 1;
-	if (da) {
+	if (dopamine) {
 		neuron->dopamine_on();
 		if (!sys->run(60, false) )
 			errcode = 1;

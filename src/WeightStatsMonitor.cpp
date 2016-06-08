@@ -55,7 +55,7 @@ void WeightStatsMonitor::propagate()
 {
 	if (auryn::sys->get_clock()%ssize==0) {
 		AurynDouble mean,std;
-		src->stats(mean,std,z);
+		src->stats(mean,std,z_ind);
 		outfile << (auryn::sys->get_time()) << " " << mean << " "  << std << std::endl;
 	}
 
