@@ -226,8 +226,8 @@ int main(int ac, char* av[])
         ZynapseConnection *con = \
                 new ZynapseConnection(tetanus, neuron, weight, sparseness, am, ap);
         con->random_data_consolidation(zup);
-        con->set_noise(noise); // TODO add to zynapseconn
-        con->set_tau(tau);
+        con->set_noise(noise);
+        con->set_tau(tau,0);con->set_tau(tau,1);con->set_tau(tau,2);
 
         msg = "Setting up monitors ...";
         logger->msg(msg,PROGRESS,true);

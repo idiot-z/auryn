@@ -144,7 +144,6 @@ public:
 	LinearTrace *tr_gxy;
 
         void random_data_potentiation(AurynFloat z_up, bool reset=false);
-        void count_states(AurynInt *states);
 
         void seed(int s);
 
@@ -152,7 +151,9 @@ public:
         void potentiate(NeuronID i);
         void potentiate();
         void depress();
-//         void stats(AurynFloat &mean, AurynFloat &std, vector<NeuronID> * presynaptic_list);
+
+	void set_noise(AurynFloat level);
+	void set_tau(AurynFloat level, NeuronID z);
 };
 
 }

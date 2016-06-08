@@ -238,20 +238,6 @@ void ZynapseConnection::random_data_potentiation(AurynFloat z_up, bool reset)
         }
 }
 
-// void ZynapseConnection::count_states(AurynInt *states)
-// {
-//         float *data[3];
-//         for (int j=0; j<3; j++)
-//                 data[j] = layers[j]->data;
-//         for (NeuronID i=0; i<get_nonzero(); i++,data[0]++,data[1]++,data[2]++) {
-//                 int state = 0;
-//                 for (int j=0; j<3; j++)
-//                         if ((*data[j])>0)
-//                                 state += pow(2,j);
-//                 states[state]++;
-//         }
-// }
-
 // TODO check where is RANDOM_SEED + gettimeofday
 void ZynapseConnection::seed(int s)
 {
@@ -266,30 +252,6 @@ void ZynapseConnection::seed(int s)
 	zynapse_connection_gen.seed(s); 
 	has_been_seeded = true;
 }
-
-// TODO used in loggers?
-// void ZynapseConnection::stats(AurynFloat &mean, AurynFloat &std, vector<NeuronID> * presynaptic_list)
-// {
-//         NeuronID count = 0;
-//         AurynFloat sum = 0;
-//         AurynFloat sum2 = 0;
-//         vector<NeuronID>::const_iterator i_end = presynaptic_list->end();
-//         NeuronID * ind = w->get_row_begin(0);
-//         for ( vector<NeuronID>::const_iterator i = presynaptic_list->begin(); i != i_end; ++i)
-//                 for ( NeuronID * c = w->get_row_begin(*i); c != w->get_row_end(*i); ++c) {
-//                         AurynWeight value = gsl_data[c-ind];
-//                         sum += value;
-//                         sum2 += pow(value,2);
-//                         ++count;
-//                 }
-//         if ( count <= 1 ) {
-//                 mean = sum;
-//                 std = 0;
-//                 return;
-//         }
-//         mean = sum/count;
-//         std = sqrt(sum2/count-pow(mean,2));
-// }
 
 void ZynapseConnection::potentiate(NeuronID i)
 {
@@ -311,4 +273,14 @@ void ZynapseConnection::depress()
         for (int z=0; z<3; z++) {
 		w->state_set_all(w->get_state_begin(z),wmin);
 	}
+}
+
+void ZynapseConnection::set_noise(AurynFloat level)
+{
+        eta = wo*(k_w-1)*sqrt(level*TUPD)/2;
+}
+
+void ZynapseConnection::set_tau(AurynFloat level, NeuronID z)
+{
+	euler[z] = TUPD/level;
 }
