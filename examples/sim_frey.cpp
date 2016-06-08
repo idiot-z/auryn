@@ -40,7 +40,6 @@ int main(int ac, char* av[])
         std::string msg;
 
         bool verbose = false;
-        bool fast = false;
 
         int n_in = 2000;
         int n_out = 10;
@@ -74,7 +73,6 @@ int main(int ac, char* av[])
                 desc.add_options()
                         ("help,h", "produce help message")
                         ("verbose,v", "verbose mode")
-                        ("fast,f", "turn off some of the monitors to run faster")
                         ("pre", po::value<double>(), "pre time [0.]")
                         ("post", po::value<double>(), "post time [3600.]")
                         ("sparseness,s", po::value<double>(), "sparseness [0.1]")
@@ -99,11 +97,6 @@ int main(int ac, char* av[])
 
                 if (vm.count("verbose")) {
                         verbose = true;
-                }
-
-                if (vm.count("fast")) {
-                        std::cout << "fast on.\n";
-                        fast = true;
                 }
 
                 if (vm.count("pre")) {
@@ -238,24 +231,29 @@ int main(int ac, char* av[])
 
         msg = "Setting up monitors ...";
         logger->msg(msg,PROGRESS,true);
-	// TODO fast
 
-	sprintf(strbuf, "%s/%s_%s.%d.wgs", dir.c_str(), file_prefix, protocol.c_str());
+	sprintf(strbuf, "%s/%s_%s_x.%d.wgs", dir.c_str(), file_prefix, protocol.c_str());
         WeightStatsMonitor * wsmon = \
-                new WeightStatsMonitor(con, strbuf, monitor_time);
+                new WeightStatsMonitor(con, strbuf, monitor_time, 0);
+	sprintf(strbuf, "%s/%s_%s_y.%d.wgs", dir.c_str(), file_prefix, protocol.c_str());
+        WeightStatsMonitor * wsmon = \
+                new WeightStatsMonitor(con, strbuf, monitor_time, 1);
+	sprintf(strbuf, "%s/%s_%s_z.%d.wgs", dir.c_str(), file_prefix, protocol.c_str());
+        WeightStatsMonitor * wsmon = \
+                new WeightStatsMonitor(con, strbuf, monitor_time, 2);
 
-        TagMonitor * tmon = \ // TODO !!
-                new TagMonitor(con, strbuf, monitor_time);
-
-	sprintf(strbuf, "%s/%s_%s_x.%d.syn", dir.c_str(), file_prefix, protocol.c_str());
-        WeightMonitor * xmon = \
-                new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 0);
-	sprintf(strbuf, "%s/%s_%s_y.%d.syn", dir.c_str(), file_prefix, protocol.c_str());
-        WeightMonitor * ymon = \
-                new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 1);
-	sprintf(strbuf, "%s/%s_%s_z.%d.syn", dir.c_str(), file_prefix, protocol.c_str());
-        WeightMonitor * zmon = \
-                new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 2);
+	// TODO to count states (directly on data files): if x_i>0 s+=2^i
+	if (n_rec>0) {
+		sprintf(strbuf, "%s/%s_%s_x.%d.syn", dir.c_str(), file_prefix, protocol.c_str());
+		WeightMonitor * xmon =					\
+			new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 0);
+		sprintf(strbuf, "%s/%s_%s_y.%d.syn", dir.c_str(), file_prefix, protocol.c_str());
+		WeightMonitor * ymon =					\
+			new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 1);
+		sprintf(strbuf, "%s/%s_%s_z.%d.syn", dir.c_str(), file_prefix, protocol.c_str());
+		WeightMonitor * zmon =					\
+			new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 2);
+	}
 
 	sprintf(strbuf, "%s/%s_%s.%d.ras", dir.c_str(), file_prefix, protocol.c_str());
         SpikeMonitor * smon = new SpikeMonitor(sys, neuron, strbuf);
