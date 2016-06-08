@@ -31,7 +31,6 @@
 
 #include "auryn_definitions.h"
 #include "TripletConnection.h"
-#include "LinearTrace.h"
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>

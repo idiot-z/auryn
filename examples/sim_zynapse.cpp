@@ -47,6 +47,7 @@ int main(int ac, char* av[])
         double am = 1e-4;
         double ap = 1e-4;
         double sparseness = 0.1;
+        double zup = 0.1;
         AurynWeight we = 0.15;
         // AurynWeight wi = 0.3;
 
@@ -66,6 +67,7 @@ int main(int ac, char* av[])
                         ("re", po::value<double>(), "excitatory input rate")
                         // ("ri", po::value<double>(), "inhibitory input rate")
                         ("we", po::value<double>(), "input weight (exc)")
+                        ("zup,z", po::value<double>(), "initial potentiated synapses")
                         // ("wi", po::value<double>(), "input weight (inh)")
                         ("time,t", po::value<double>(), "simulation time")
                         ("am", po::value<double>(), "depression rate")
@@ -120,6 +122,12 @@ int main(int ac, char* av[])
                         std::cout << "we set to "
                                   << vm["we"].as<double>() << ".\n";
                         we = vm["we"].as<double>();
+                }
+
+                if (vm.count("zup")) {
+                        std::cout << "zup set to "
+                                  << vm["zup"].as<double>() << ".\n";
+                        zup = vm["zup"].as<double>();
                 }
 
                 // if (vm.count("wi")) {
@@ -192,6 +200,7 @@ int main(int ac, char* av[])
 	logger->msg(msg,PROGRESS,true);
 
         ZynapseConnection * con_e = new ZynapseConnection(poisson_e,neurons,we,sparseness,am,ap);
+	con_e->random_data_potentiation(zup);
         // SparseConnection * con_e = new SparseConnection(poisson_e,neurons,we,sparseness,GLUT);
 
 	msg = "Setting up monitors ...";
@@ -215,7 +224,7 @@ int main(int ac, char* av[])
 	if (!fast) {
 		sprintf(strbuf, "%s/%s.%d.syn", dir.c_str(), file_prefix, world.rank() );
 		WeightMonitor * wmon = new WeightMonitor( con_e, strbuf, 10 );
-		for ( int i = 0 ; i < 100 ; ++i )
+		for ( int i = 0 ; i < size_in ; ++i )
 			wmon->add_to_list(i,0);
 	}
 
