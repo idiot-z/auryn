@@ -160,11 +160,13 @@ void ZynapseConnection::integrate()
 	AurynWeight *x = w->get_state_begin(0),
 		*y = w->get_state_begin(1),
 		*z = w->get_state_begin(2);
-	
+
 	for (AurynLong i = 0 ; i < w->get_nonzero() ; ++i ) {
 		AurynWeight xyi = x[i] - y[i],
-			yzi = y[i] - z[i],
-			gxy = tr_gxy->get(i);
+			yzi = y[i] - z[i];
+		AurynInt gxy;
+		if (tr_gxy->get(i)>THETAG) gxy = 1;
+		else gxy = 0;
 		x[i] += euler[0]*(coeff[0]*(coeff[1]-x[i]*(coeff[2]-x[i]*(coeff[3]-x[i]) ) ) -
 				  META_YX*(1-gxy)*xyi
 				  ) + eta*(*die)();
@@ -215,7 +217,7 @@ void ZynapseConnection::dw_post(const NeuronID * pre, NeuronID post, AurynWeight
 
 void ZynapseConnection::evolve()
 {
-        if (sys->get_clock()%timestep_synapses==0)
+        if (dst->get_post_size() > 0 && sys->get_clock()%timestep_synapses==0)
                 integrate();
 }
 
