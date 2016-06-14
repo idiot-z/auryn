@@ -134,6 +134,8 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 	w->state_add(w->get_state_begin(0),w->get_state_begin(1));
 	w->state_add(w->get_state_begin(0),w->get_state_begin(2));
 
+	tr_gxy = new LinearTrace(get_nonzero(), TAUG, sys->get_clock_ptr());
+
 	// Run finalize again to rebuild backward matrix
 	finalize(); 
 }
@@ -146,9 +148,6 @@ void ZynapseConnection::set_plast_constants(AurynFloat a_m, AurynFloat a_p)
 
 void ZynapseConnection::finalize() {
         TripletConnection::finalize();
-	// TODO ask Fried if correct clock
-	AurynTime *clk = auryn::sys->get_clock_ptr();
-	tr_gxy = new LinearTrace(get_nonzero(), TAUG, clk);
 }
 
 /************
@@ -163,7 +162,8 @@ void ZynapseConnection::integrate()
 
 	for (AurynLong i = 0 ; i < w->get_nonzero() ; ++i ) {
 		AurynWeight xyi = x[i] - y[i],
-			yzi = y[i] - z[i];
+			yzi = y[i] - z[i],
+			prot = dst->get_protein();
 		AurynInt gxy;
 		if (tr_gxy->get(i)>THETAG) gxy = 1;
 		else gxy = 0;
@@ -172,10 +172,10 @@ void ZynapseConnection::integrate()
 				  ) + eta*(*die)();
 		y[i] += euler[1]*(coeff[0]*(coeff[1]-y[i]*(coeff[2]-y[i]*(coeff[3]-y[i]) ) ) +
 				  TILT*gxy*xyi -
-				  META_ZY*(1-dst->get_protein())*yzi
+				  META_ZY*(1-prot)*yzi
 				  ) + eta*(*die)();
-		z[i] += euler[2]*(coeff[0]*(coeff[1]-z[i]*(coeff[2]-z[1]*(coeff[3]-z[i]) ) ) +
-				  TILT*dst->get_protein()*yzi
+		z[i] += euler[2]*(coeff[0]*(coeff[1]-z[i]*(coeff[2]-z[i]*(coeff[3]-z[i]) ) ) +
+				  TILT*prot*yzi
 				  ) + eta*(*die)();				  
 	}
         dst->update_protein();
@@ -191,12 +191,15 @@ void ZynapseConnection::dw_pre(const NeuronID * post, AurynWeight * weight)
 		data_ind = post-fwd_ind;
 	// NOTE get_data(data_ind) = get_data(post) !
         AurynDouble dw = hom_fudge*tr_post->get(translated_spike),
-                reset = w->get_data(post,2)-*weight;
-        if (reset<0) dw *= 1-C_RESET*reset;
+                reset = *weight-w->get_data(post,2);
+        if (reset>0) dw *= 1+C_RESET*reset;
         if (dw>1) dw = 1;
-        if (reset>0) tr_gxy->add(data_ind, dw*(1.-tr_gxy->get(data_ind)));
-        dw *= (*weight-wmin);
-        *weight -= dw;
+        if (reset<0) {
+		AurynDouble gxy = tr_gxy->get(data_ind);
+		tr_gxy->add(data_ind, dw*(1.-gxy));
+	}
+        dw *= wmin-*weight;
+        *weight += dw;
 }
 
 /*! This function implements what happens to synapes experiencing a
@@ -210,8 +213,11 @@ void ZynapseConnection::dw_post(const NeuronID * pre, NeuronID post, AurynWeight
                 reset = w->get_data(data_ind,2)-*weight;
         if (reset>0) dw *= 1+C_RESET*reset;
         if (dw>1) dw = 1;
-        if (reset<0) tr_gxy->add(data_ind,dw*(1.-tr_gxy->get(data_ind)));
-        dw *= (wmax-*weight);
+        if (reset<0) {
+		AurynDouble gxy = tr_gxy->get(data_ind);
+		tr_gxy->add(data_ind, dw*(1.-gxy));
+	}
+        dw *= wmax-*weight;
         *weight += dw;
 }
 
@@ -285,4 +291,36 @@ void ZynapseConnection::set_noise(AurynFloat level)
 void ZynapseConnection::set_tau(AurynFloat level, NeuronID z)
 {
 	euler[z] = TUPD/level;
+}
+
+AurynFloat ZynapseConnection::get_g(NeuronID i)
+{
+  return tr_gxy->get(i);
+}
+
+AurynFloat ZynapseConnection::get_protein()
+{
+  return dst->get_protein();
+}
+
+void ZynapseConnection::g_stats(AurynDouble &mean, AurynDouble &std)
+{
+	double sum = 0; // needs double here -- machine precision really matters here
+	double sum2 = 0;
+
+	NeuronID count = get_nonzero();
+
+	for ( AurynWeight i = 0 ; i != count ; ++i ) {
+		sum  += get_g(i);
+		sum2 += (get_g(i) * get_g(i));
+	}
+
+	if ( count <= 1 ) {
+		mean = sum;
+		std = 0;
+		return;
+	}
+
+	mean = sum/count;
+	std = sqrt(sum2/count-mean*mean);
 }

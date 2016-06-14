@@ -112,6 +112,7 @@
 #include "NormalStimulator.h"
 #include "PatternStimulator.h"
 #include "CurrentInjector.h"
+#include "ZynapseMonitor.h"
 
 
 #endif /*AURYN_H__*/

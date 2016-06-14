@@ -71,7 +71,7 @@ int main(int ac, char* av[])
                         ("help,h", "produce help message")
                         ("verbose,v", "verbose mode")
                         ("pre", po::value<double>(), "pre time [0.]")
-                        ("post", po::value<double>(), "post time [3600.]")
+                        ("tot,t", po::value<double>(), "total time [3600.]")
                         ("sparseness,s", po::value<double>(), "sparseness [0.1]")
                         ("protocol,p", po::value<int>(), "protocol 0-3 [WTET,stet,wlfs,slfs]")
                         ("nrec,n", po::value<int>(), "number of recorded synapses [100]")
@@ -103,10 +103,10 @@ int main(int ac, char* av[])
                         pretime = vm["pre"].as<double>();
                 }
 
-                if (vm.count("post")) {
-                        std::cout << "post time set to "
-                                  << vm["post"].as<double>() << ".\n";
-                        posttime = vm["post"].as<double>();
+                if (vm.count("tot")) {
+                        std::cout << "total time set to "
+                                  << vm["tot"].as<double>() << ".\n";
+                        posttime = vm["tot"].as<double>();
                 }
 
                 if (vm.count("sparseness")) {
@@ -260,6 +260,9 @@ int main(int ac, char* av[])
 
 	sprintf(strbuf, "%s/%s_%s.%d.ras", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
         SpikeMonitor * smon = new SpikeMonitor(neuron, strbuf);
+
+	sprintf(strbuf, "%s/%s_%s.%d.zyn", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
+        ZynapseMonitor * zmon = new ZynapseMonitor(con, strbuf, monitor_time);
 
 	msg = "Simulating ...";
 	logger->msg(msg,PROGRESS,true);

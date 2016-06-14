@@ -154,6 +154,10 @@ public:
 
 	void set_noise(AurynFloat level);
 	void set_tau(AurynFloat level, NeuronID z);
+
+	AurynFloat get_g(NeuronID i);
+	AurynFloat get_protein();
+	void g_stats(AurynDouble &mean, AurynDouble &std);
 };
 
 }
