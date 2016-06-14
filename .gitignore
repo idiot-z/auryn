@@ -9,10 +9,6 @@ doc/*
 !doc/auryn_logo_small.png
 # Ignore emacs backups
 *~
-# Ignore stuff in the build dirs except the makefiles
+# Ignore stuff in the build dir
 build/*
-!build/lcncluster/Makefile
-!build/lcnsunc1/Makefile
-!build/home/Makefile
-!build/debug/Makefile
-!build/tug/Makefile
+
