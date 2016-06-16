@@ -42,7 +42,7 @@ namespace auryn {
 	 * we add AVX support to the code. If you use get_vector_size functions from SpikingGroup this will automatically
 	 * be taken care of...
 	 * */
-	template <typename T> 
+	template <typename T, typename IndexType = NeuronID > 
 	class AurynVector { 
 		private: 
 			friend class boost::serialization::access;
@@ -50,7 +50,7 @@ namespace auryn {
 			void serialize(Archive & ar, const unsigned int version)
 			{
 				ar & size;
-				for ( NeuronID i = 0 ; i < size ; ++i ) 
+				for ( IndexType i = 0 ; i < size ; ++i ) 
 					ar & data[i];
 			}
 
@@ -58,7 +58,7 @@ namespace auryn {
 			/*! \brief Checks if argument is larger than size and throws and exception if so 
 			 *
 			 * Check only enabled if NDEBUG is not defined.*/
-			void check_size(NeuronID x)
+			void check_size(IndexType x)
 			{
 #ifndef NDEBUG
 				if ( x >= size ) {
@@ -81,11 +81,11 @@ namespace auryn {
 
 		public:
 			// We keep these params public for legacy compatibility reasons
-			NeuronID size;
+			IndexType size;
 			T * data __attribute__((aligned(16)));
 
 			/*! \brief Default constructor */
-			AurynVector(NeuronID n) 
+			AurynVector(IndexType n) 
 			{
 				size = n;
 				data = new T [n];
@@ -98,10 +98,20 @@ namespace auryn {
 				delete data;
 			}
 
+			/*! \brief resize data array to new_size */
+			void resize(IndexType new_size) 
+			{
+				if ( size != new_size ) {
+					delete [] data;
+					data = new T [new_size];
+					set_zero(); 
+				}
+			}
+
 			/*! \brief Set all elements to value v. */
 			virtual void set_all(T v) 
 			{
-				for ( NeuronID i = 0 ; i < size ; ++i ) {
+				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] = v;
 				}
 			}
@@ -115,7 +125,7 @@ namespace auryn {
 			/*! \brief Scales all vector elements by a. */
 			virtual void scale(AurynFloat a) 
 			{
-				for ( NeuronID i = 0 ; i < size ; ++i ) {
+				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] *= a;
 				}
 			}
@@ -123,13 +133,13 @@ namespace auryn {
 			/*! \brief Adds constant c to each vector element */
 			virtual void add(AurynFloat c) 
 			{
-				for ( NeuronID i = 0 ; i < size ; ++i ) {
+				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] += c;
 				}
 			}
 
 			/*! \brief Adds the value c to specific vector element i */
-			virtual void add_specific(NeuronID i, AurynFloat c) 
+			virtual void add_specific(IndexType i, AurynFloat c) 
 			{
 				check_size(i);
 				data[i] += c;
@@ -141,7 +151,7 @@ namespace auryn {
 			virtual void add(AurynVector * v) 
 			{
 				check_size(v);
-				for ( NeuronID i = 0 ; i < size ; ++i ) {
+				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] += v->data[i];
 				}
 			}
@@ -156,7 +166,7 @@ namespace auryn {
 			virtual void sub(AurynVector * v) 
 			{
 				check_size(v);
-				for ( NeuronID i = 0 ; i < size ; ++i ) {
+				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] -= v->data[i];
 				}
 			}
@@ -173,7 +183,7 @@ namespace auryn {
 			virtual void mul(AurynVector * v) 
 			{
 				check_size(v);
-				for ( NeuronID i = 0 ; i < size ; ++i ) {
+				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] *= v->data[i];
 				}
 			}
@@ -184,7 +194,7 @@ namespace auryn {
 			virtual void copy(AurynVector * v) 
 			{
 				check_size(v);
-				for ( NeuronID i = 0 ; i < size ; ++i ) {
+				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] = v->data[i];
 				}
 			}
@@ -199,13 +209,13 @@ namespace auryn {
 			virtual void saxpy(AurynFloat a, AurynVector * x) 
 			{
 				check_size(x);
-				for ( NeuronID i = 0 ; i < size ; ++i ) {
+				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] += a * x->data[i];
 				}
 			}
 
 			/*! \brief Gets element i from vector */
-			T get(NeuronID i)
+			T get(IndexType i)
 			{
 				check_size(i);
 				return data[i];
@@ -215,17 +225,25 @@ namespace auryn {
 			 *
 			 * When no argument is given the function returns the first element of 
 			 * data array of the vector. */
-			T * ptr(NeuronID i = 0)
+			T * ptr(IndexType i = 0)
 			{
 				check_size(i);
 				return data+i;
 			}
 
 			/*! \brief Sets element i in vector to value */
-			void set(NeuronID i, T value)
+			void set(IndexType i, T value)
 			{
 				check_size(i);
 				data[i] = value;
+			}
+
+			/*! \brief Squares each element */
+			void sqr()
+			{
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					data[i] = data[i]*data[i];
+				}
 			}
 
 			/*! \brief Clips all vector elements to the range min max
@@ -235,7 +253,7 @@ namespace auryn {
 			 */
 			void clip(T min, T max)
 			{
-				for ( NeuronID i = 0 ; i < size ; ++i ) {
+				for ( IndexType i = 0 ; i < size ; ++i ) {
 					if ( data[i] < min ) {
 						 data[i] = min;
 					} else 
@@ -246,7 +264,7 @@ namespace auryn {
 
 			/*! \brief Print vector elements to std out for debugging */
 			void print() {
-				for ( NeuronID i = 0 ; i < size ; ++i ) {
+				for ( IndexType i = 0 ; i < size ; ++i ) {
 					std::cout << get(i) << " ";
 				}
 				std::cout << std::endl;
@@ -259,7 +277,7 @@ namespace auryn {
 	 * some of the functions defined in the template with SIMD intrinsics 
 	 * for higher performance.
 	 */
-	class AurynVectorFloat : public AurynVector<float> 
+	class AurynVectorFloat : public AurynVector<float,NeuronID> 
 	{
 
 		public:

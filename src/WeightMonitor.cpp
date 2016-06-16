@@ -50,7 +50,7 @@ WeightMonitor::WeightMonitor(SparseConnection * source, NeuronID i, NeuronID j, 
 	switch (recordingmode) {
 		case DATARANGE : 
 			for (AurynLong c = elem_i ; c < elem_j ; ++c)
-				add_to_list(c,z) ;
+				add_to_list_by_data_index(c,z) ;
 			break;
 		case SINGLE :
 			add_to_list(i,j,z);
@@ -88,7 +88,7 @@ void WeightMonitor::init(SparseConnection * source, NeuronID i, NeuronID j, std:
 	elem_j = 0;
 }
 
-void WeightMonitor::add_to_list(AurynLong data_index, NeuronID z)
+void WeightMonitor::add_to_list_by_data_index(AurynLong data_index, StateID z)
 {
 	element_list->push_back( data_index + z*mat->get_statesize() );
 }
@@ -100,10 +100,10 @@ void WeightMonitor::add_to_list(AurynWeight * ptr)
 	}
 }
 
-void WeightMonitor::add_to_list(NeuronID i, NeuronID j, NeuronID z)
+void WeightMonitor::add_to_list(NeuronID i, NeuronID j, StateID z)
 {
 	if ( mat->exists(i, j, z) ) {
-		add_to_list( mat->get_data_index(i, j, z) );
+		add_to_list_by_data_index( mat->get_data_index(i, j), z );
 	} else {
 		std::stringstream oss;
 		oss << "WeightMonitor:: Tried adding element " 
@@ -142,7 +142,7 @@ void WeightMonitor::add_to_list( std::vector<neuron_pair>  vec, std::string labe
 
 void WeightMonitor::add_equally_spaced(NeuronID number, NeuronID z)
 {
-	if ( z >= mat->get_z_values() ) {
+	if ( z >= mat->get_num_z_values() ) {
 		auryn::logger->msg("WeightMonitor:: z too large. Trying to monitor complex "
 				"synaptic values which do not exist."
 				,ERROR);
