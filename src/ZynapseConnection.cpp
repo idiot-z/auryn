@@ -38,28 +38,28 @@ bool ZynapseConnection::has_been_seeded = false;
 
 ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
                                      TransmitterType transmitter)
-        : TripletConnection(source, destination, transmitter)
+        : DuplexConnection(source, destination, transmitter)
 
 {
         init(1, KW, AM, AP);
 }
 
 ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-				     AurynFloat wo, AurynFloat sparseness,
-				     TransmitterType transmitter)
-        : TripletConnection(source, destination, wo, sparseness, 0, 1, 1, 1,
-			    transmitter, "ZynapseConnection")
+                                     AurynFloat wo, AurynFloat sparseness,
+                                     TransmitterType transmitter)
+        : DuplexConnection(source, destination, wo, sparseness,
+                           transmitter, "ZynapseConnection")
 
 {
         init(wo, KW, AM, AP);
 }
 
 ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-				     AurynFloat wo, AurynFloat sparseness,
-				     AurynFloat a_m, AurynFloat a_p, AurynFloat kw,
-				     TransmitterType transmitter, string name)
-        : TripletConnection(source, destination, wo, sparseness, 0, 1, 1, 1,
-			    transmitter, name)
+                                     AurynFloat wo, AurynFloat sparseness,
+                                     AurynFloat a_m, AurynFloat a_p, AurynFloat kw,
+                                     TransmitterType transmitter, string name)
+        : DuplexConnection(source, destination, wo, sparseness,
+			   transmitter, name)
 
 {
         init(wo, kw, a_m, a_p);
@@ -68,10 +68,10 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destinat
 }
 
 ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-				     const char *filename, AurynFloat wo,
-				     AurynFloat a_m, AurynFloat a_p, AurynFloat kw,
-				     TransmitterType transmitter)
-        : TripletConnection(source, destination, filename, 0, 1, 1, 1, transmitter)
+                                     const char *filename, AurynFloat wo,
+                                     AurynFloat a_m, AurynFloat a_p, AurynFloat kw,
+                                     TransmitterType transmitter)
+        : DuplexConnection(source, destination, filename, transmitter)
 {
         init(wo, kw, a_m, a_p);
 }
@@ -90,7 +90,7 @@ void ZynapseConnection::free()
 {
         delete dist;
         delete die;
-	delete tr_gxy;
+        delete tr_gxy;
 }
 
 void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, AurynFloat a_p)
@@ -99,17 +99,18 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 
         dist = new boost::normal_distribution<> (0., 1.);
         die = new boost::variate_generator<boost::mt19937&, boost::normal_distribution<> >
-		(zynapse_connection_gen, *dist);
-	if (!has_been_seeded)
-		seed(12345*auryn::communicator->rank());
+                (zynapse_connection_gen, *dist);
+        if (!has_been_seeded)
+                seed(12345*auryn::communicator->rank());
 
-	set_min_weight(wo);
-	set_max_weight(k_w*wo);
+        set_min_weight(wo);
+        set_max_weight(k_w*wo);
 
         tr_pre = src->get_pre_trace(TAU_PRE);
         tr_post = dst->get_post_trace(TAU_POST);
         tr_post2 = dst->get_post_trace(TAU_LONG);
 
+	// TODO from here
         set_plast_constants(a_m, a_p);
 
         euler[0] = TUPD/TAUX;
@@ -125,19 +126,19 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 
         eta = wo*(k_w-1)*sqrt(ETAXYZ*TUPD)/2;
 
-	// Set number of synaptic states
-	w->set_num_synapse_states(3);
+        // Set number of synaptic states
+        w->set_num_synapse_states(3);
 
-	// copy all the elements from z=0 to z=1,2
-	w->state_set_all(w->get_state_begin(1),0.0);
-	w->state_set_all(w->get_state_begin(2),0.0);
-	w->state_add(w->get_state_begin(0),w->get_state_begin(1));
-	w->state_add(w->get_state_begin(0),w->get_state_begin(2));
+        // copy all the elements from z=0 to z=1,2
+        w->state_set_all(w->get_state_begin(1),0.0);
+        w->state_set_all(w->get_state_begin(2),0.0);
+        w->state_add(w->get_state_begin(0),w->get_state_begin(1));
+        w->state_add(w->get_state_begin(0),w->get_state_begin(2));
 
-	tr_gxy = new LinearTrace(get_nonzero(), TAUG, sys->get_clock_ptr());
+        tr_gxy = new LinearTrace(get_nonzero(), TAUG, sys->get_clock_ptr());
 
-	// Run finalize again to rebuild backward matrix
-	finalize(); 
+        // Run finalize again to rebuild backward matrix
+        finalize();
 }
 
 void ZynapseConnection::set_plast_constants(AurynFloat a_m, AurynFloat a_p)
@@ -156,28 +157,28 @@ void ZynapseConnection::finalize() {
 
 void ZynapseConnection::integrate()
 {
-	AurynWeight *x = w->get_state_begin(0),
-		*y = w->get_state_begin(1),
-		*z = w->get_state_begin(2);
+        AurynWeight *x = w->get_state_begin(0),
+                *y = w->get_state_begin(1),
+                *z = w->get_state_begin(2);
 
-	for (AurynLong i = 0 ; i < w->get_nonzero() ; ++i ) {
-		AurynWeight xyi = x[i] - y[i],
-			yzi = y[i] - z[i],
-			prot = dst->get_protein();
-		AurynInt gxy;
-		if (tr_gxy->get(i)>THETAG) gxy = 1;
-		else gxy = 0;
-		x[i] += euler[0]*(coeff[0]*(coeff[1]-x[i]*(coeff[2]-x[i]*(coeff[3]-x[i]) ) ) -
-				  META_YX*(1-gxy)*xyi
-				  ) + eta*(*die)();
-		y[i] += euler[1]*(coeff[0]*(coeff[1]-y[i]*(coeff[2]-y[i]*(coeff[3]-y[i]) ) ) +
-				  TILT*gxy*xyi -
-				  META_ZY*(1-prot)*yzi
-				  ) + eta*(*die)();
-		z[i] += euler[2]*(coeff[0]*(coeff[1]-z[i]*(coeff[2]-z[i]*(coeff[3]-z[i]) ) ) +
-				  TILT*prot*yzi
-				  ) + eta*(*die)();				  
-	}
+        for (AurynLong i = 0 ; i < w->get_nonzero() ; ++i ) {
+                AurynWeight xyi = x[i] - y[i],
+                        yzi = y[i] - z[i],
+                        prot = dst->get_protein();
+                AurynInt gxy;
+                if (tr_gxy->get(i)>THETAG) gxy = 1;
+                else gxy = 0;
+                x[i] += euler[0]*(coeff[0]*(coeff[1]-x[i]*(coeff[2]-x[i]*(coeff[3]-x[i]) ) ) -
+                                  META_YX*(1-gxy)*xyi
+                                  ) + eta*(*die)();
+                y[i] += euler[1]*(coeff[0]*(coeff[1]-y[i]*(coeff[2]-y[i]*(coeff[3]-y[i]) ) ) +
+                                  TILT*gxy*xyi -
+                                  META_ZY*(1-prot)*yzi
+                                  ) + eta*(*die)();
+                z[i] += euler[2]*(coeff[0]*(coeff[1]-z[i]*(coeff[2]-z[i]*(coeff[3]-z[i]) ) ) +
+                                  TILT*prot*yzi
+                                  ) + eta*(*die)();
+        }
         dst->update_protein();
 }
 
@@ -188,16 +189,16 @@ void ZynapseConnection::dw_pre(const NeuronID * post, AurynWeight * weight)
 {
         // translate post id to local id on rank: translated_spike
         NeuronID translated_spike = dst->global2rank(*post),
-		data_ind = post-fwd_ind;
-	// NOTE get_data(data_ind) = get_data(post) !
+                data_ind = post-fwd_ind;
+        // NOTE get_data(data_ind) = get_data(post) !
         AurynDouble dw = hom_fudge*tr_post->get(translated_spike),
                 reset = *weight-w->get_data(post,2);
         if (reset>0) dw *= 1+C_RESET*reset;
         if (dw>1) dw = 1;
         if (reset<0) {
-		AurynDouble gxy = tr_gxy->get(data_ind);
-		tr_gxy->add(data_ind, dw*(1.-gxy));
-	}
+                AurynDouble gxy = tr_gxy->get(data_ind);
+                tr_gxy->add(data_ind, dw*(1.-gxy));
+        }
         dw *= wmin-*weight;
         *weight += dw;
 }
@@ -208,15 +209,15 @@ void ZynapseConnection::dw_post(const NeuronID * pre, NeuronID post, AurynWeight
 {
         // at this point post was already translated to a local id in
         // the propagate_backward function below.
-	NeuronID data_ind = bkw_data[pre-bkw_ind]-fwd_data;
+        NeuronID data_ind = bkw_data[pre-bkw_ind]-fwd_data;
         AurynDouble dw = A3_plus*tr_pre->get(*pre)*tr_post2->get(post),
                 reset = w->get_data(data_ind,2)-*weight;
         if (reset>0) dw *= 1+C_RESET*reset;
         if (dw>1) dw = 1;
         if (reset<0) {
-		AurynDouble gxy = tr_gxy->get(data_ind);
-		tr_gxy->add(data_ind, dw*(1.-gxy));
-	}
+                AurynDouble gxy = tr_gxy->get(data_ind);
+                tr_gxy->add(data_ind, dw*(1.-gxy));
+        }
         dw *= wmax-*weight;
         *weight += dw;
 }
@@ -235,7 +236,7 @@ void ZynapseConnection::random_data_potentiation(AurynFloat z_up, bool reset)
         if (z_up) {
                 boost::exponential_distribution<> exp_dist(z_up);
                 boost::variate_generator<boost::mt19937&, boost::exponential_distribution<> >
-			exp_die(zynapse_connection_gen, exp_dist);
+                        exp_die(zynapse_connection_gen, exp_dist);
 
                 AurynLong x = (AurynLong) exp_die(), y;
                 while (x < get_nonzero() ) {
@@ -249,38 +250,38 @@ void ZynapseConnection::random_data_potentiation(AurynFloat z_up, bool reset)
 // TODO check where is RANDOM_SEED + gettimeofday
 void ZynapseConnection::seed(int s)
 {
-// #ifdef RANDOM_SEED
-//         timeval ss;
-//         gettimeofday(&ss,NULL);
-//         s += ss.tv_usec-100*(ss.tv_usec/100);
-// #endif
-	std::stringstream oss;
-	oss << get_log_name() << "Seeding with " << s;
-	auryn::logger->msg(oss.str(),VERBOSE);
-	zynapse_connection_gen.seed(s); 
-	has_been_seeded = true;
+        // #ifdef RANDOM_SEED
+        //         timeval ss;
+        //         gettimeofday(&ss,NULL);
+        //         s += ss.tv_usec-100*(ss.tv_usec/100);
+        // #endif
+        std::stringstream oss;
+        oss << get_log_name() << "Seeding with " << s;
+        auryn::logger->msg(oss.str(),VERBOSE);
+        zynapse_connection_gen.seed(s);
+        has_been_seeded = true;
 }
 
 void ZynapseConnection::potentiate(NeuronID i)
 {
-  for (int z=0; z<3; z++)
-	  w->set_data(i,get_max_weight(),z);
+        for (int z=0; z<3; z++)
+                w->set_data(i,get_max_weight(),z);
 }
 
 void ZynapseConnection::potentiate()
 {
-	AurynWeight wmax = get_max_weight();
+        AurynWeight wmax = get_max_weight();
         for (int z=0; z<3; z++) {
-		w->state_set_all(w->get_state_begin(z),wmax);
-	}
+                w->state_set_all(w->get_state_begin(z),wmax);
+        }
 }
 
 void ZynapseConnection::depress()
 {
-	AurynWeight wmin = get_min_weight();
+        AurynWeight wmin = get_min_weight();
         for (int z=0; z<3; z++) {
-		w->state_set_all(w->get_state_begin(z),wmin);
-	}
+                w->state_set_all(w->get_state_begin(z),wmin);
+        }
 }
 
 void ZynapseConnection::set_noise(AurynFloat level)
@@ -290,37 +291,37 @@ void ZynapseConnection::set_noise(AurynFloat level)
 
 void ZynapseConnection::set_tau(AurynFloat level, NeuronID z)
 {
-	euler[z] = TUPD/level;
+        euler[z] = TUPD/level;
 }
 
 AurynFloat ZynapseConnection::get_g(NeuronID i)
 {
-  return tr_gxy->get(i);
+        return tr_gxy->get(i);
 }
 
 AurynFloat ZynapseConnection::get_protein()
 {
-  return dst->get_protein();
+        return dst->get_protein();
 }
 
 void ZynapseConnection::g_stats(AurynDouble &mean, AurynDouble &std)
 {
-	double sum = 0; // needs double here -- machine precision really matters here
-	double sum2 = 0;
+        double sum = 0; // needs double here -- machine precision really matters here
+        double sum2 = 0;
 
-	NeuronID count = get_nonzero();
+        NeuronID count = get_nonzero();
 
-	for ( AurynWeight i = 0 ; i != count ; ++i ) {
-		sum  += get_g(i);
-		sum2 += (get_g(i) * get_g(i));
-	}
+        for ( AurynWeight i = 0 ; i != count ; ++i ) {
+                sum  += get_g(i);
+                sum2 += (get_g(i) * get_g(i));
+        }
 
-	if ( count <= 1 ) {
-		mean = sum;
-		std = 0;
-		return;
-	}
+        if ( count <= 1 ) {
+                mean = sum;
+                std = 0;
+                return;
+        }
 
-	mean = sum/count;
-	std = sqrt(sum2/count-mean*mean);
+        mean = sum/count;
+        std = sqrt(sum2/count-mean*mean);
 }

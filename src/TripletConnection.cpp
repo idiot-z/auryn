@@ -29,53 +29,50 @@ using namespace auryn;
 
 void TripletConnection::init(AurynFloat tau_hom, AurynFloat eta, AurynFloat kappa, AurynFloat maxweight)
 {
-        if ( dst->get_post_size() == 0 ) return; // avoids to run this code on silent nodes with zero post neurons.
+	if ( dst->get_post_size() == 0 ) return; // avoids to run this code on silent nodes with zero post neurons.
 
-        /* Initialization of plasticity parameters. */
-        A3_plus = 6.5e-3;
-        A3_plus *= eta;
+	/* Initialization of plasticity parameters. */
+	A3_plus = 6.5e-3;
+	A3_plus *= eta;
 
-        tau_plus  = 16.8e-3;
-        tau_minus = 33.7e-3;
-        tau_long  = 114e-3;
+	tau_plus  = 16.8e-3;
+	tau_minus = 33.7e-3;
+	tau_long  = 114e-3;
 
-        tau_homeostatic = tau_hom;
+	tau_homeostatic = tau_hom;
 
-        /* Initialization of presynaptic traces */
-        tr_pre = src->get_pre_trace(tau_plus);
+	/* Initialization of presynaptic traces */
+	tr_pre = src->get_pre_trace(tau_plus);
 
-        /* Initialization of postsynaptic traces */
-        tr_post = dst->get_post_trace(tau_minus);
-        tr_post2 = dst->get_post_trace(tau_long);
-        if (tau_hom > 0) {
-                tr_post_hom = dst->get_post_trace(tau_hom);
-                hom_fudge = A3_plus*tau_plus*tau_long/tau_minus/kappa/tau_hom/tau_hom;
-        } else {
-                hom_fudge = A3_plus*tau_plus*tau_long/tau_minus;
-        }
+	/* Initialization of postsynaptic traces */
+	tr_post = dst->get_post_trace(tau_minus);
+	tr_post2 = dst->get_post_trace(tau_long);
+	tr_post_hom = dst->get_post_trace(tau_hom);
 
-        /* Set min/max weight values. */
-        set_min_weight(0.0);
-        set_max_weight(maxweight);
+	hom_fudge = A3_plus*tau_plus*tau_long/(tau_minus)/kappa/tau_hom/tau_hom;
 
-        stdp_active = true;
+	/* Set min/max weight values. */
+	set_min_weight(0.0);
+	set_max_weight(maxweight);
+
+	stdp_active = true;
 
 }
 
-void TripletConnection::init_shortcuts()
+void TripletConnection::init_shortcuts() 
 {
-        if ( dst->get_post_size() == 0 ) return; // if there are no target neurons on this rank
+	if ( dst->get_post_size() == 0 ) return; // if there are no target neurons on this rank
 
-        fwd_ind = w->get_row_begin(0);
-        fwd_data = w->get_data_begin();
+	fwd_ind = w->get_row_begin(0); 
+	fwd_data = w->get_data_begin();
 
-        bkw_ind = bkw->get_row_begin(0);
-        bkw_data = bkw->get_data_begin();
+	bkw_ind = bkw->get_row_begin(0); 
+	bkw_data = bkw->get_data_begin();
 }
 
 void TripletConnection::finalize() {
-        DuplexConnection::finalize();
-        init_shortcuts();
+	DuplexConnection::finalize();
+	init_shortcuts();
 }
 
 void TripletConnection::free()
@@ -86,16 +83,16 @@ TripletConnection::TripletConnection(SpikingGroup * source, NeuronGroup * destin
 {
 }
 
-TripletConnection::TripletConnection(SpikingGroup * source, NeuronGroup * destination,
-                                     const char * filename,
-                                     AurynFloat tau_hom,
-                                     AurynFloat eta,
-                                     AurynFloat kappa, AurynFloat maxweight ,
-                                     TransmitterType transmitter)
-        : DuplexConnection(source,
-                           destination,
-                           filename,
-                           transmitter)
+TripletConnection::TripletConnection(SpikingGroup * source, NeuronGroup * destination, 
+		const char * filename, 
+		AurynFloat tau_hom, 
+		AurynFloat eta, 
+		AurynFloat kappa, AurynFloat maxweight , 
+		TransmitterType transmitter) 
+: DuplexConnection(source, 
+		destination, 
+		filename, 
+		transmitter)
 {
 	init(tau_hom, eta, kappa, maxweight);
 	init_shortcuts();
@@ -115,119 +112,117 @@ TripletConnection::TripletConnection(SpikingGroup * source, NeuronGroup * destin
 		transmitter, 
 		name)
 {
-        init(tau_hom, eta, kappa, maxweight);
-        if ( name.empty() )
-                set_name("TripletConnection");
-        init_shortcuts();
+	init(tau_hom, eta, kappa, maxweight);
+	if ( name.empty() ) 
+		set_name("TripletConnection");
+	init_shortcuts();
 }
 
 TripletConnection::~TripletConnection()
 {
-        if ( dst->get_post_size() > 0 )
-                free();
+	if ( dst->get_post_size() > 0 ) 
+		free();
 }
 
 void TripletConnection::set_hom_trace(AurynFloat freq)
 {
-        if ( dst->get_post_size() > 0 && tau_homeostatic > 0)
-                tr_post_hom->set_all(freq*tr_post_hom->get_tau());
+	if ( dst->get_post_size() > 0 ) 
+		tr_post_hom->set_all(freq*tr_post_hom->get_tau());
 }
+
 
 AurynWeight TripletConnection::get_hom(NeuronID i)
 {
-        if (tau_homeostatic > 0)
-                return pow(tr_post_hom->get(i),2);
-        else
-                return 1;
+	return pow(tr_post_hom->get(i),2);
 }
 
 
-/*! This function implements what happens to synapes transmitting a
- *  spike to neuron 'post'. */
-void TripletConnection::dw_pre(const NeuronID * post, AurynWeight * weight)
+AurynWeight TripletConnection::dw_pre(NeuronID post)
 {
-        // translate post id to local id on rank: translated_spike
-        NeuronID translated_spike = dst->global2rank(*post);
-        AurynDouble dw = -hom_fudge*(tr_post->get(translated_spike)*get_hom(translated_spike));
-        *weight += dw;
-        // clips too small weights
-        if ( *weight < get_min_weight() )
-                *weight = get_min_weight();
+	// translate post id to local id on rank: translated_spike
+	NeuronID translated_spike = dst->global2rank(post); 
+	AurynDouble dw = -hom_fudge*(tr_post->get(translated_spike)*get_hom(translated_spike));
+	return dw;
 }
 
-/*! This function implements what happens to synapes experiencing a
- *  backpropagating action potential from neuron 'pre'. */
-void TripletConnection::dw_post(const NeuronID * pre, NeuronID post, AurynWeight * weight)
+AurynWeight TripletConnection::dw_post(NeuronID pre, NeuronID post)
 {
-        // at this point post was already translated to a local id in
-        // the propagate_backward function below.
-        AurynDouble dw = A3_plus*tr_pre->get(*pre)*tr_post2->get(post);
-        *weight += dw;
-        // clips too large weights
-        if (*weight>get_max_weight()) *weight=get_max_weight();
+	// at this point post was already translated to a local id in 
+	// the propagate_backward function below.
+	AurynDouble dw = A3_plus*tr_pre->get(pre)*tr_post2->get(post);
+	return dw;
 }
 
 
 void TripletConnection::propagate_forward()
 {
-        // loop over all spikes (yields presynaptic cell ids of cells that spiked)
-        for (SpikeContainer::const_iterator spike = src->get_spikes()->begin() ; // spike = pre_spike
-             spike != src->get_spikes()->end() ; ++spike ) {
-                // loop over all postsynaptic partners
-                for (const NeuronID * c = w->get_row_begin(*spike) ;
-                     c != w->get_row_end(*spike) ;
-                     ++c ) { // c = post index
+	// loop over all spikes (yields presynaptic cell ids of cells that spiked)
+	for (SpikeContainer::const_iterator spike = src->get_spikes()->begin() ; // spike = pre_spike
+			spike != src->get_spikes()->end() ; ++spike ) {
+		// loop over all postsynaptic partners the cells 
+		// that are targeted by that presynaptic cell
+		for (const NeuronID * c = w->get_row_begin(*spike) ; 
+				c != w->get_row_end(*spike) ; 
+				++c ) { // c = post index
 
-                        // determines the weight of connection
-                        AurynWeight * weight = w->get_data_ptr(c);
-                        // evokes the postsynaptic response
-                        transmit( *c , *weight );
+			// determines the weight of connection
+			AurynWeight * weight = w->get_data_ptr(c); 
+			// evokes the postsynaptic response 
+			transmit( *c , *weight );
 
-                        // handle plasticity
-                        if ( stdp_active ) {
-                                // performs weight update upon presynaptic spike
-                                dw_pre(c,weight);
+			// handles plasticity
+			if ( stdp_active ) {
 
-                        }
-                }
-        }
+				// performs weight update upon presynaptic spike
+			    *weight += dw_pre(*c);
+
+			    // clips too small weights
+			    if ( *weight < get_min_weight() ) 
+					*weight = get_min_weight();
+			}
+		}
+	}
 }
 
 void TripletConnection::propagate_backward()
 {
-        if (stdp_active) {
-                SpikeContainer::const_iterator spikes_end = dst->get_spikes_immediate()->end();
-                // loop over all spikes
-                for (SpikeContainer::const_iterator spike = dst->get_spikes_immediate()->begin() ; // spike = post_spike
-                     spike != spikes_end ;
-                     ++spike ) {
-                        // Since we need the local id of the postsynaptic neuron that spiked
-                        // multiple times, we translate it here:
-                        NeuronID translated_spike = dst->global2rank(*spike);
+	if (stdp_active) { 
+		SpikeContainer::const_iterator spikes_end = dst->get_spikes_immediate()->end();
+		// loop over all spikes
+		for (SpikeContainer::const_iterator spike = dst->get_spikes_immediate()->begin() ; // spike = post_spike
+				spike != spikes_end ; 
+				++spike ) {
+			// Since we need the local id of the postsynaptic neuron that spiked 
+			// multiple times, we translate it here:
+			NeuronID translated_spike = dst->global2rank(*spike); 
 
-                        // loop over all presynaptic partners
-                        for (const NeuronID * c = bkw->get_row_begin(*spike) ; c != bkw->get_row_end(*spike) ; ++c ) {
+			// loop over all presynaptic partners
+			for (const NeuronID * c = bkw->get_row_begin(*spike) ; c != bkw->get_row_end(*spike) ; ++c ) {
 
-#ifdef CODE_ACTIVATE_PREFETCHING_INTRINSICS
-                                // prefetches next memory cells to reduce number of last-level cache misses
-                                _mm_prefetch((const char *)bkw_data[c-bkw_ind+2],  _MM_HINT_NTA);
-#endif
+				#ifdef CODE_ACTIVATE_PREFETCHING_INTRINSICS
+				// prefetches next memory cells to reduce number of last-level cache misses
+				_mm_prefetch((const char *)bkw_data[c-bkw_ind+2],  _MM_HINT_NTA);
+				#endif
 
-                                // computes plasticity update
-                                AurynWeight * weight = bkw->get_data(c);
-                                dw_post(c,translated_spike,weight);
+				// computes plasticity update
+				AurynWeight * weight = bkw->get_data(c); 
+				*weight += dw_post(*c,translated_spike);
 
-                        }
-                }
-        }
+				// clips too large weights
+				if (*weight>get_max_weight()) *weight=get_max_weight();
+			}
+		}
+	}
 }
 
 void TripletConnection::propagate()
 {
-        propagate_forward();
-        propagate_backward();
+	propagate_forward();
+	propagate_backward();
 }
 
 void TripletConnection::evolve()
 {
 }
+
+

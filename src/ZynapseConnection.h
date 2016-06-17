@@ -30,7 +30,7 @@
 #define ZYNAPSECONNECTION_H_
 
 #include "auryn_definitions.h"
-#include "TripletConnection.h"
+#include "DuplexConnection.h"
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -70,15 +70,28 @@ namespace auryn {
 
 /*! \brief Implements complex synapse as described by Ziegler et al. 2015.
  */
-class ZynapseConnection : public TripletConnection
+class ZynapseConnection : public DuplexConnection
 {
 private:
 
-        AurynFloat euler[3], coeff[4], eta;
+	void virtual_serialize(boost::archive::binary_oarchive & ar, const unsigned int version ) 
+	{
+		DuplexConnection::virtual_serialize(ar,version);
+		ar & *w;
+	}
+
+	void virtual_serialize(boost::archive::binary_iarchive & ar, const unsigned int version ) 
+	{
+		DuplexConnection::virtual_serialize(ar,version);
+		ar & *w;
+	}
+
+        AurynFloat euler[3], coeff[4], eta, ap, am;
         int timestep_synapses;
 
 	void init(AurynFloat wo, AurynFloat a_m, AurynFloat a_p,
 		  AurynFloat k_w);
+	void init_shortcuts();
 
         static boost::mt19937 zynapse_connection_gen;
         boost::normal_distribution<> *dist;
@@ -91,11 +104,35 @@ private:
 
 protected:
 
+	NeuronID * fwd_ind; 
+	AurynWeight * fwd_data;
+
+	NeuronID * bkw_ind; 
+	AurynWeight ** bkw_data;
+
+	/* Definitions of presynaptic traces */
+	PRE_TRACE_MODEL * tr_pre;
+
+	/* Definitions of postsynaptic traces */
+	DEFAULT_TRACE_MODEL * tr_post;
+	DEFAULT_TRACE_MODEL * tr_post2;
+
+	/*! This function propagates spikes from pre to postsynaptic cells
+	 * and performs plasticity updates upon presynaptic spikes. */
+	void propagate_forward();
+
+	/*! This performs plasticity updates following postsynaptic spikes.
+	 * To that end the postsynaptic spikes have to be communicated backward
+	 * to the corresponding synapses connecting to presynaptic neurons. This
+	 * is why this function is called propagate_backward ... it is remeniscent
+	 * of a back-propagating action potential. */
+	void propagate_backward();
+
         /*! Action on weight upon presynaptic spike on connection with postsynaptic
          * partner post. This function should be modified to define new spike based
          * plasticity rules.
          * @param post the postsynaptic cell from which the synaptic trace is read out*/
-        virtual void dw_pre(const NeuronID * post, AurynWeight * weight);
+        void dw_pre(const NeuronID * post, AurynWeight * weight);
 
         /*! Action on weight upon postsynaptic spike of cell post on connection
          * with presynaptic partner pre. This function should be modified to define
@@ -103,7 +140,7 @@ protected:
          * @param pre the presynaptic cell in question.
          * @param post the postsynaptic cell in question.
          */
-        virtual void dw_post(const NeuronID * pre, NeuronID post, AurynWeight * weight);
+        void dw_post(const NeuronID * pre, NeuronID post, AurynWeight * weight);
 
         void integrate();
 
@@ -112,9 +149,9 @@ protected:
 public:
 
         ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-			  TransmitterType transmitter);
+			  TransmitterType transmitter=GLUT);
         ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
-			  AurynFloat wo, AurynFloat sparseness, TransmitterType transmitter);
+			  AurynFloat wo, AurynFloat sparseness, TransmitterType transmitter=GLUT);
 	/*! Default constructor. Sets up a random sparse connection and plasticity parameters
 	 *
 	 * @param source the presynaptic neurons.
@@ -140,6 +177,7 @@ public:
         virtual ~ZynapseConnection();
 
         virtual void evolve();
+	virtual void propagate();
 
 	LinearTrace *tr_gxy;
 
