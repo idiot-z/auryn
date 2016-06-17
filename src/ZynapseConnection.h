@@ -1,6 +1,3 @@
-// TODO
-// copyright?
-
 /*
  * Copyright 2014 Friedemann Zenke
  *
@@ -89,8 +86,8 @@ private:
         AurynFloat euler[3], coeff[4], eta, ap, am;
         int timestep_synapses;
 
-	void init(AurynFloat wo, AurynFloat a_m, AurynFloat a_p,
-		  AurynFloat k_w);
+	void init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m,
+		  AurynFloat a_p);
 	void init_shortcuts();
 
         static boost::mt19937 zynapse_connection_gen;
@@ -115,7 +112,7 @@ protected:
 
 	/* Definitions of postsynaptic traces */
 	DEFAULT_TRACE_MODEL * tr_post;
-	DEFAULT_TRACE_MODEL * tr_post2;
+	DEFAULT_TRACE_MODEL * tr_long;
 
 	/*! This function propagates spikes from pre to postsynaptic cells
 	 * and performs plasticity updates upon presynaptic spikes. */
@@ -131,7 +128,9 @@ protected:
         /*! Action on weight upon presynaptic spike on connection with postsynaptic
          * partner post. This function should be modified to define new spike based
          * plasticity rules.
-         * @param post the postsynaptic cell from which the synaptic trace is read out*/
+         * @param post the postsynaptic cell from which the synaptic trace is read out
+         * @param weight the synaptic weight to be depressed
+	 */
         void dw_pre(const NeuronID * post, AurynWeight * weight);
 
         /*! Action on weight upon postsynaptic spike of cell post on connection
@@ -139,12 +138,13 @@ protected:
          * new spike based plasticity rules.
          * @param pre the presynaptic cell in question.
          * @param post the postsynaptic cell in question.
+         * @param weight the synaptic weight to be potentiated
          */
         void dw_post(const NeuronID * pre, NeuronID post, AurynWeight * weight);
 
         void integrate();
 
-        void noise(NeuronID z);
+	LinearTrace *tr_gxy;
 
 public:
 
@@ -155,12 +155,12 @@ public:
 	/*! Default constructor. Sets up a random sparse connection and plasticity parameters
 	 *
 	 * @param source the presynaptic neurons.
-	 * @param destinatino the postsynaptic neurons.
+	 * @param destination the postsynaptic neurons.
 	 * @param wo the initial synaptic weight and lower fixed point of weight dynamics.
 	 * @param sparseness the sparseness of the connection (probability of connection).
 	 * @param a_m the depression learning rate.
 	 * @param a_p the potentiation learning rate.
-	 * @param kw the relative high weight (default is 3).
+	 * @param kw the ratio high/low weight (default is 3).
 	 * @param transmitter the TransmitterType (default is GLUT, glutamatergic).
 	 * @param name a sensible identifier for the connection used in debug output.
 	 */
@@ -179,7 +179,10 @@ public:
         virtual void evolve();
 	virtual void propagate();
 
-	LinearTrace *tr_gxy;
+	/*! Toggle stdp active/inactive. When inactive traces are still updated,
+	 * but weights are not.
+	 */
+	bool stdp_active;
 
         void random_data_potentiation(AurynFloat z_up, bool reset=false);
 

@@ -25,7 +25,7 @@
 
 #include "ZynapseConnection.h"
 
-// TODO add loggers, copyright?
+// TODO copyright?
 
 using namespace auryn;
 
@@ -59,7 +59,7 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destinat
                                      AurynFloat a_m, AurynFloat a_p, AurynFloat kw,
                                      TransmitterType transmitter, string name)
         : DuplexConnection(source, destination, wo, sparseness,
-			   transmitter, name)
+                           transmitter, name)
 
 {
         init(wo, kw, a_m, a_p);
@@ -108,10 +108,10 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 
         tr_pre = src->get_pre_trace(TAU_PRE);
         tr_post = dst->get_post_trace(TAU_POST);
-        tr_post2 = dst->get_post_trace(TAU_LONG);
+        tr_long = dst->get_post_trace(TAU_LONG);
 
-	// TODO from here
         set_plast_constants(a_m, a_p);
+	stdp_active = true;
 
         euler[0] = TUPD/TAUX;
         euler[1] = TUPD/TAUY;
@@ -143,12 +143,24 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
 
 void ZynapseConnection::set_plast_constants(AurynFloat a_m, AurynFloat a_p)
 {
-        hom_fudge = a_m/TAU_POST;
-        A3_plus = a_p/TAU_PRE/TAU_LONG;
+        am = a_m/TAU_POST;
+        ap = a_p/TAU_PRE/TAU_LONG;
 }
 
 void ZynapseConnection::finalize() {
-        TripletConnection::finalize();
+        DuplexConnection::finalize();
+        init_shortcuts();
+}
+
+void ZynapseConnection::init_shortcuts()
+{
+        if ( dst->get_post_size() == 0 ) return; // if there are no target neurons on this rank
+
+        fwd_ind = w->get_row_begin(0);
+        fwd_data = w->get_data_begin();
+
+        bkw_ind = bkw->get_row_begin(0);
+        bkw_data = bkw->get_data_begin();
 }
 
 /************
@@ -182,7 +194,63 @@ void ZynapseConnection::integrate()
         dst->update_protein();
 }
 
-// TODO comment
+void ZynapseConnection::propagate_forward()
+{
+        // loop over all spikes (yields presynaptic cell ids of cells that spiked)
+        for (SpikeContainer::const_iterator spike = src->get_spikes()->begin() ; // spike = pre_spike
+             spike != src->get_spikes()->end() ; ++spike ) {
+                // loop over all postsynaptic partners the cells
+                // that are targeted by that presynaptic cell
+                for (const NeuronID * c = w->get_row_begin(*spike) ;
+                     c != w->get_row_end(*spike) ;
+                     ++c ) { // c = post index
+
+                        // determines the weight of connection
+                        AurynWeight * weight = w->get_data_ptr(c);
+                        // evokes the postsynaptic response
+                        transmit( *c , *weight );
+
+                        // handles plasticity
+                        if ( stdp_active ) {
+
+                                // performs weight update upon presynaptic spike
+                                dw_pre(c, weight);
+
+                        }
+                }
+        }
+}
+
+void ZynapseConnection::propagate_backward()
+{
+        if (stdp_active) {
+                SpikeContainer::const_iterator spikes_end = dst->get_spikes_immediate()->end();
+                // loop over all spikes
+                for (SpikeContainer::const_iterator spike = dst->get_spikes_immediate()->begin();
+                     spike != spikes_end; // spike = post_spike
+                     ++spike ) {
+                        // Since we need the local id of the postsynaptic neuron that spiked
+                        // multiple times, we translate it here:
+                        NeuronID translated_spike = dst->global2rank(*spike);
+
+                        // loop over all presynaptic partners
+                        for (const NeuronID * c = bkw->get_row_begin(*spike);
+			     c != bkw->get_row_end(*spike); ++c ) {
+
+#ifdef CODE_ACTIVATE_PREFETCHING_INTRINSICS
+                                // prefetches next memory cells to reduce number of
+				// last-level cache misses
+                                _mm_prefetch((const char *)bkw_data[c-bkw_ind+2],  _MM_HINT_NTA);
+#endif
+
+                                // computes plasticity update
+                                AurynWeight * weight = bkw->get_data(c);
+                                dw_post(c,translated_spike,weight);
+                        }
+                }
+        }
+}
+
 /*! This function implements what happens to synapes transmitting a
  *  spike to neuron 'post'. */
 void ZynapseConnection::dw_pre(const NeuronID * post, AurynWeight * weight)
@@ -191,7 +259,7 @@ void ZynapseConnection::dw_pre(const NeuronID * post, AurynWeight * weight)
         NeuronID translated_spike = dst->global2rank(*post),
                 data_ind = post-fwd_ind;
         // NOTE get_data(data_ind) = get_data(post) !
-        AurynDouble dw = hom_fudge*tr_post->get(translated_spike),
+        AurynDouble dw = am*tr_post->get(translated_spike),
                 reset = *weight-w->get_data(post,2);
         if (reset>0) dw *= 1+C_RESET*reset;
         if (dw>1) dw = 1;
@@ -210,7 +278,7 @@ void ZynapseConnection::dw_post(const NeuronID * pre, NeuronID post, AurynWeight
         // at this point post was already translated to a local id in
         // the propagate_backward function below.
         NeuronID data_ind = bkw_data[pre-bkw_ind]-fwd_data;
-        AurynDouble dw = A3_plus*tr_pre->get(*pre)*tr_post2->get(post),
+        AurynDouble dw = ap*tr_pre->get(*pre)*tr_long->get(post),
                 reset = w->get_data(data_ind,2)-*weight;
         if (reset>0) dw *= 1+C_RESET*reset;
         if (dw>1) dw = 1;
@@ -220,6 +288,12 @@ void ZynapseConnection::dw_post(const NeuronID * pre, NeuronID post, AurynWeight
         }
         dw *= wmax-*weight;
         *weight += dw;
+}
+
+void ZynapseConnection::propagate()
+{
+	propagate_forward();
+	propagate_backward();
 }
 
 void ZynapseConnection::evolve()
@@ -247,7 +321,7 @@ void ZynapseConnection::random_data_potentiation(AurynFloat z_up, bool reset)
         }
 }
 
-// TODO check where is RANDOM_SEED + gettimeofday
+// TODO check for RANDOM_SEED + gettimeofday
 void ZynapseConnection::seed(int s)
 {
         // #ifdef RANDOM_SEED
@@ -265,12 +339,11 @@ void ZynapseConnection::seed(int s)
 void ZynapseConnection::potentiate(NeuronID i)
 {
         for (int z=0; z<3; z++)
-                w->set_data(i,get_max_weight(),z);
+                w->set_data(i,wmax,z);
 }
 
 void ZynapseConnection::potentiate()
 {
-        AurynWeight wmax = get_max_weight();
         for (int z=0; z<3; z++) {
                 w->state_set_all(w->get_state_begin(z),wmax);
         }
@@ -278,7 +351,6 @@ void ZynapseConnection::potentiate()
 
 void ZynapseConnection::depress()
 {
-        AurynWeight wmin = get_min_weight();
         for (int z=0; z<3; z++) {
                 w->state_set_all(w->get_state_begin(z),wmin);
         }
