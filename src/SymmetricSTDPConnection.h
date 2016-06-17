@@ -88,7 +88,6 @@ public:
 	 * @param tau_stdp the size of one side of the STDP window.
 	 * @param maxweight the maxium allowed weight.
 	 * @param transmitter the transmitter type of the connection - by default GABA for inhibitory connection.
-	 * @param name a meaningful name of the connection which will appear in debug output.
 	 */
 	SymmetricSTDPConnection(SpikingGroup * source, NeuronGroup * destination, 
 			const char * filename, 

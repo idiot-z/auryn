@@ -66,9 +66,9 @@ protected:
 public:
 
 	/*! Default Constructor 
-	 @param[source] The source spiking group.
-	 @param[filename] The filename to write to (should be different for each rank.)
-	 @param[samplinginterval] The sampling interval used for writing data to file.
+	 @param source The source spiking group.
+	 @param filename The filename to write to (should be different for each rank.)
+	 @param samplinginterval The sampling interval used for writing data to file.
 	 which currently also determines the filter time constant. */
 	RateMonitor(SpikingGroup * source, string filename, AurynFloat samplinginterval=1);
 

@@ -76,9 +76,9 @@ protected:
 	
 public:
 	/*! Default Constructor 
-	 * @param[target] The target spiking group. 
-	 * @param[rate]   The firing rate of each the Normal process.
-	 * @param[weight] The weight or unit of amount of change on the state variable
+	 * @param target The target spiking group. 
+	 * @param sigma sigma (default = 1)
+	 * @param target_state the target state (default = "inj_current")
 	 */
 	NormalStimulator(NeuronGroup * target, AurynWeight sigma=1.0, string target_state="inj_current");
 

@@ -70,8 +70,8 @@ public:
 	STPConnection(const char * filename);
 
 	/*! Minimal constructor to which leaves the connection uninitialized 
-	 * \param source The presynaptic SpikingGroup
-	 * \param destination the postsynaptic NeuronGroup
+	 * \param rows the number of rows
+	 * \param cols the number of columns
 	 */
 	STPConnection(NeuronID rows, NeuronID cols);
 
@@ -87,7 +87,6 @@ public:
 	 * \param destination the postsynaptic NeuronGroup
 	 * \param filename The file to load the connectivity from upon initialization
 	 * \param transmitter The transmitter type
-	 * \param name The connection name as it appears in debugging output
 	 */
 	STPConnection(SpikingGroup * source, NeuronGroup * destination, const char * filename , TransmitterType transmitter=GLUT);
 

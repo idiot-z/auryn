@@ -71,19 +71,21 @@ protected:
 	
 public:
 	/*! Default Constructor 
-	 @param[source] The source spiking group.
-	 @param[filename] The filename to write to (should be different for each rank.)
-	 @param[patfile] Filename from where to load the patterns
-	 @param[binsize] The binsize used for counting in seconds.*/
+	 @param source The source spiking group.
+	 @param filename The filename to write to (should be different for each rank.)
+	 @param patfile Filename from where to load the patterns
+	 @param maximum_patterns the maximum number of patterns (default=10)
+	 @param binsize The binsize used for counting in seconds.*/
 	PatternMonitor(SpikingGroup * source, string filename, 
 			string patfile, 
 			NeuronID maximum_patterns=10, 
 			AurynFloat binsize=1e-1);
 	/*! Constructor that loads patterns from a StimulusGroup
-	 @param[source] The source spiking group.
-	 @param[filename] The filename to write to (should be different for each rank.)
-	 @param[stimgroup] Stimulus group to load patterns from
-	 @param[binsize] The binsize used for counting in seconds.*/
+	 @param source The source spiking group.
+	 @param filename The filename to write to (should be different for each rank.)
+	 @param stimgroup Stimulus group to load patterns from
+	 @param maximum_patterns the maximum number of patterns (default=10)
+	 @param binsize The binsize used for counting in seconds.*/
 	PatternMonitor(SpikingGroup * source, string filename, 
 			StimulusGroup * stimgroup,
 			NeuronID maximum_patterns=10, 

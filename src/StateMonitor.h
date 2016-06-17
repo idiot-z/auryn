@@ -87,6 +87,7 @@ public:
 	/*! \brief Alternative constructor
 	 *
 	 * \param state The source state vector
+	 * \param id The neuron id in the group to record from 
 	 * \param filename The filename of the file to dump the output to
 	 * \param sampling_interval The sampling interval in seconds
 	 */
@@ -95,6 +96,7 @@ public:
 	/*! \brief EulerTrace constructor
 	 *
 	 * \param trace The source synaptic trace
+	 * \param id The neuron id in the group to record from 
 	 * \param filename The filename of the file to dump the output to
 	 * \param sampling_interval The sampling interval in seconds
 	 */
