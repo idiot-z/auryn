@@ -144,11 +144,13 @@ public:
 	/*! Default constructor. Sets up a random sparse connection and plasticity parameters
 	 *
 	 * @param source the presynaptic neurons.
-	 * @param destinatino the postsynaptic neurons.
+	 * @param destination the postsynaptic neurons.
 	 * @param weight the initial synaptic weight.
 	 * @param sparseness the sparseness of the connection (probability of connection).
 	 * @param tau_hom the timescale of the homeostatic rate estimate (moving average).
-	 * @param eta the relaive learning rate (default=1).
+	 * @param eta the relative learning rate (default=1).
+	 * @param kappa the target rate of homeostasis (default=3).
+	 * @param maxweight the maximum weight (default=1).
 	 * @param transmitter the TransmitterType (default is GLUT, glutamatergic).
 	 * @param name a sensible identifier for the connection used in debug output.
 	 */

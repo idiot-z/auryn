@@ -93,7 +93,7 @@ public:
 
 	/*!\brief  Sets every parameter that ellow to record only from every X neuron.
 	 *
-	 * \param the number X as described above. */
+	 * \param every the number X as described above. */
 	void set_every(NeuronID every);
 
 	/*! \brief  Default destructor. */

@@ -71,8 +71,9 @@ protected:
 public:
 
 	/*! Default Constructor 
-	 * @param[target] Initializes all currents with this value
-	 * @param[initial_current] Initializes all currents with this value
+	 * @param target Initializes all currents with this value
+	 * @param neuron_state_name the neuron state name (default = "mem")
+	 * @param initial_current Initializes all currents with this value
 	 */
 	CurrentInjector(NeuronGroup * target, std::string neuron_state_name="mem", AurynFloat initial_current=0.0 );
 

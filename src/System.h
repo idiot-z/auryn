@@ -196,7 +196,7 @@ namespace auryn {
 		 * In most cases you will want to use save_network_state and only dump a limited subset (e.g. 
 		 * all the plastic connections) in human-readable text files for analysis.
 		 *
-		 * \param Basename (directory and prefix of file) of the netstate file without extension
+		 * \param basename (directory and prefix of file) of the netstate file without extension
 		 */
 		void save_network_state_text(std::string basename);
 

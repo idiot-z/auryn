@@ -72,9 +72,12 @@ protected:
 	
 public:
 	/*! Default Constructor 
-	 @param[target] The target spiking group.
-	 @param[filename] The filename to read the timeseries from 
-	 @param[patfile] Filename from where to load the patterns */
+	 * @param target The target spiking group.
+	 * @param filename The filename to read the timeseries from 
+	 * @param patfile Filename from where to load the patterns
+	 * @param scale scale (default=1)
+	 * @param maximum_patterns the maximum number of patterns (default=10)
+	 */
 	PatternStimulator(NeuronGroup * target, 
 			string filename, 
 			string patfile="", 

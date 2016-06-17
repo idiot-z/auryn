@@ -63,9 +63,9 @@ protected:
 	virtual void virtual_serialize(boost::archive::binary_iarchive & ar, const unsigned int version );
 public:
 	/*! Default Constructor 
-	 @param[source] The source spiking group.
-	 @param[filename] The filename to write to (should be different for each rank.)
-	 @param[binsize] The binsize used for counting in seconds.*/
+	 @param source The source spiking group.
+	 @param filename The filename to write to (should be different for each rank.)
+	 @param binsize The binsize used for counting in seconds.*/
 	PopulationRateMonitor(SpikingGroup * source, string filename, AurynDouble binsize=1e-3);
 	/*! Default Destructor */
 	virtual ~PopulationRateMonitor();

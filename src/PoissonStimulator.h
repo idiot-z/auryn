@@ -84,9 +84,9 @@ protected:
 	
 public:
 	/*! \brief Default Constructor 
-	 * @param[target] The target spiking group. 
-	 * @param[rate]   The firing rate of each the Poisson process.
-	 * @param[weight] The weight or unit of amount of change on the state variable
+	 * @param target The target spiking group. 
+	 * @param rate   The firing rate of each the Poisson process.
+	 * @param w The weight or unit of amount of change on the state variable
 	 */
 	PoissonStimulator(NeuronGroup * target, AurynFloat rate=100.0, AurynWeight w = 0.1 );
 
@@ -96,7 +96,7 @@ public:
 
 	/*! \brief Sets the event rate of the underlying Poisson generator 
 	 *
-	 * @param[rate] The Poisson rate */
+	 * @param rate The Poisson rate */
 	void set_rate(AurynFloat rate);
 
 	/*! \brief Returns the event rate of the underlying Poisson generator. */
@@ -104,7 +104,7 @@ public:
 
 	/*! \brief Seeds the random number generator of all PoissonStimulator objects on this rank
 	 *
-	 * @param[s] The random seed. 
+	 * @param s The random seed. 
 	 * Note, that this seeding function is not rank save. To ensure that the currents are 
 	 * independent on different ranks you need to give a different seed on each rank when
 	 * running parallel simulations. */

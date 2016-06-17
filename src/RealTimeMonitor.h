@@ -58,9 +58,9 @@ protected:
 	
 public:
 	/*! Default Constructor 
-	 @param[filename] The filename to write to (should be different for each rank.)
-	 @param[start] Start time.)
-	 @param[stop] Stop time.*/
+	 @param filename The filename to write to (should be different for each rank.)
+	 @param start Start time.)
+	 @param stop Stop time.*/
 	RealTimeMonitor(std::string filename, AurynDouble start = 1e-3, AurynDouble stop = 100);
 
 	/*! Default Destructor */
