@@ -49,7 +49,6 @@ void AIFGroup::init()
 	thr_rest = -50e-3;
 	dthr = 100e-3;
 	tau_thr = 5e-3;
-	// tau_thr = 2e-3;
 	tau_mem = 20e-3;
 	tau_ampa = 5e-3;
 	tau_gaba = 10e-3;
@@ -64,8 +63,6 @@ void AIFGroup::init()
 	 *  dg = 1 */
 	tau_adapt1 = 250e-3;
 	dg_adapt1 = 10.;
-	// tau_adapt1 = 0.1;
-	// dg_adapt1  = 0.1;
  
 	calculate_scale_constants();
 

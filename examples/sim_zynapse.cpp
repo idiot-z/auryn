@@ -1,4 +1,3 @@
-// TODO copyright?
 /*
  * Copyright 2014-2016 Friedemann Zenke
  *
@@ -30,7 +29,7 @@ using namespace auryn;
 int main(int ac, char* av[])
 {
 
-        std::string dir = "/home/ziegler/git/auryn/data/";
+        std::string dir = ".";
         const char * file_prefix = "zyn";
 
         char strbuf [255];

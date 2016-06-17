@@ -25,8 +25,6 @@
 
 #include "ZynapseConnection.h"
 
-// TODO copyright?
-
 using namespace auryn;
 
 boost::mt19937 ZynapseConnection::zynapse_connection_gen = boost::mt19937();

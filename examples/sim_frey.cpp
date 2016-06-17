@@ -1,4 +1,3 @@
-// TODO copyright?
 /*
  * Copyright 2014-2016 Friedemann Zenke
  *
@@ -29,8 +28,7 @@ using namespace auryn;
 
 int main(int ac, char* av[])
 {
-	// TODO dir
-        std::string dir = "/home/ziegler/git/auryn/data";
+        std::string dir = ".";
         const char * file_prefix = "frey";
 
         char strbuf [255];
@@ -245,7 +243,7 @@ int main(int ac, char* av[])
         WeightStatsMonitor * wsmon_z = \
                 new WeightStatsMonitor(con, strbuf, monitor_time, 2);
 
-	// TODO to count states (directly on data files): if x_i>0 s+=2^i
+	// to count states (directly on data files): if x_i>0 s+=2^i
 	if (n_rec>0) {
 		sprintf(strbuf, "%s/%s_%s_x.%d.syn", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
 		WeightMonitor * xmon =					\
