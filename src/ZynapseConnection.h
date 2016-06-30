@@ -40,7 +40,7 @@
 #define META_YX 1.3*0.25
 #define META_ZY 0.95*0.25
 
-#define TAUX 20.
+#define TAUX 200.
 #define TAUY 200.
 #define TAUZ 200.
 

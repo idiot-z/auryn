@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Friedemann Zenke
+ * Copyright 2014-2016 Friedemann Zenke, Lorric Ziegler
  *
  * This file is part of Auryn, a simulation package for plastic
  * spiking neural networks.
@@ -26,6 +26,72 @@ namespace mpi = boost::mpi;
 
 using namespace auryn;
 
+bool before(char *i, char *j) {
+        std::stringstream ssi(i);
+        std::stringstream ssj(j);
+        AurynFloat ti, tj;
+        ssi >> ti;
+        ssj >> tj;
+        return ti<tj;
+}
+
+void write_train(std::ofstream *outfile, char **chTimes, int ntimes) {
+        std::sort(chTimes, chTimes+ntimes, before);
+        for (int i = 0; i < ntimes; i++) {
+                char buffer[32];
+                int n = sprintf(buffer, "%s\n", chTimes[i]);
+                outfile->write(buffer, n);
+        }
+}
+
+int generate_raster(char *filename, int prot, int n_neuron, Logger *logger) {
+
+        int *n_pulse = new int[4] {21, 100, 1, 3};
+        int *n_train = new int[4] {1, 1, 900, 900};
+        AurynFloat *dt_pulse = new AurynFloat[4] {0.01, 0.01, 0., 0.05};
+        AurynFloat *dt_train = new AurynFloat[4] {0., 0., 1., 1.};
+
+        boost::mt19937 gen;
+        boost::normal_distribution<> dist(0., 0.003);
+        boost::variate_generator<boost::mt19937&, boost::normal_distribution<> >
+                die(gen, dist);
+
+        AurynFloat offset = 1; // to avoid negative times
+
+        int ntimes = n_pulse[prot]*n_neuron;
+        char *chTimes[ntimes];
+        for (int i = 0; i < ntimes; i++)
+                chTimes[i] = new char[32];
+
+        std::ofstream outfile;
+        outfile.open(filename, std::ios::out);
+        if (!outfile) {
+                std::stringstream oss;
+                oss << "Can't open output file " << filename;
+                logger->msg(oss.str(),ERROR);
+                return 1;
+        }
+        outfile.setf(std::ios::fixed);
+        outfile.precision(4);
+
+        for (int nt = 0; nt < n_train[prot]; nt++) {
+                for (int np = 0; np < n_pulse[prot]; np++) {
+                        for (int nn = 0; nn < n_neuron; nn++) {
+                                char *ti = chTimes[np*n_neuron+nn];
+                                AurynFloat t = die()+offset;
+                                sprintf(ti, "%f %d", t, nn);
+                        }
+                        offset += dt_pulse[prot];
+                }
+                write_train(&outfile, chTimes, ntimes);
+                offset += dt_train[prot] - n_pulse[prot]*dt_pulse[prot];
+        }
+
+        outfile.close();
+
+        return 0;
+}
+
 int main(int ac, char* av[])
 {
         std::string dir = ".";
@@ -51,14 +117,15 @@ int main(int ac, char* av[])
         double time = 0.25;
         double posttime = 3600.;
 
-	AurynFloat monitor_time = 60.;
+        AurynFloat monitor_time = 60.;
 
-	string protocol = "wtet";
+        string protocol = "wtet";
+        int prot = 0;
         bool dopamine = false;
 
         double zup = 0.33;
 
-        int n_rec = 100;
+        int n_rec = 10;
 
         int errcode = 0;
 
@@ -72,7 +139,7 @@ int main(int ac, char* av[])
                         ("tot,t", po::value<double>(), "total time [3600.]")
                         ("sparseness,s", po::value<double>(), "sparseness [0.1]")
                         ("protocol,p", po::value<int>(), "protocol 0-3 [WTET,stet,wlfs,slfs]")
-                        ("nrec,n", po::value<int>(), "number of recorded synapses [100]")
+                        ("nrec,n", po::value<int>(), "number of recorded synapses [10]")
                         ("weight,w", po::value<double>(), "weight [0.05]")
                         ("am", po::value<double>(), "depression cte [2e-4]")
                         ("ap", po::value<double>(), "potentiation cte [5e-4]")
@@ -114,7 +181,7 @@ int main(int ac, char* av[])
                 }
 
                 if (vm.count("protocol")) {
-                        int prot = vm["protocol"].as<int>();
+                        prot = vm["protocol"].as<int>();
                         std::cout << "protocol set to ";
                         switch (prot) {
                         case 0:
@@ -191,11 +258,11 @@ int main(int ac, char* av[])
 
         }
         catch(std::exception& e) {
-		std::cerr << "error: " << e.what() << "\n";
+                std::cerr << "error: " << e.what() << "\n";
                 return 1;
         }
         catch(...) {
-		std::cerr << "Exception of unknown type!\n";
+                std::cerr << "Exception of unknown type!\n";
         }
 
         // BEGIN Global stuff
@@ -213,10 +280,15 @@ int main(int ac, char* av[])
         sys = new System(&world);
         // END Global stuff
 
+        msg =  "Generating raster ...";
+        logger->msg(msg,PROGRESS,true);
+
+        sprintf(strbuf, "%s/%s_%s.ras", dir.c_str(), file_prefix, protocol.c_str());
+        errcode = generate_raster(strbuf, prot, n_in, logger);
+
         msg =  "Setting up neuron groups ...";
         logger->msg(msg,PROGRESS,true);
 
-        sprintf(strbuf, "./%s_%s.ras", file_prefix, protocol.c_str());
         FileInputGroup * tetanus = new FileInputGroup(n_in, strbuf);
 
         AIFGroup * neuron = new AIFGroup(n_out);
@@ -233,58 +305,59 @@ int main(int ac, char* av[])
         msg = "Setting up monitors ...";
         logger->msg(msg,PROGRESS,true);
 
-	sprintf(strbuf, "%s/%s_%s_x.%d.wgs", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
+        sprintf(strbuf, "%s/%s_%s_x.%d.wgs", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
         WeightStatsMonitor * wsmon_x = \
                 new WeightStatsMonitor(con, strbuf, monitor_time, 0);
-	sprintf(strbuf, "%s/%s_%s_y.%d.wgs", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
+        sprintf(strbuf, "%s/%s_%s_y.%d.wgs", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
         WeightStatsMonitor * wsmon_y = \
                 new WeightStatsMonitor(con, strbuf, monitor_time, 1);
-	sprintf(strbuf, "%s/%s_%s_z.%d.wgs", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
+        sprintf(strbuf, "%s/%s_%s_z.%d.wgs", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
         WeightStatsMonitor * wsmon_z = \
                 new WeightStatsMonitor(con, strbuf, monitor_time, 2);
 
-	// to count states (directly on data files): if x_i>0 s+=2^i
-	if (n_rec>0) {
-		sprintf(strbuf, "%s/%s_%s_x.%d.syn", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
-		WeightMonitor * xmon =					\
-			new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 0);
-		sprintf(strbuf, "%s/%s_%s_y.%d.syn", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
-		WeightMonitor * ymon =					\
-			new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 1);
-		sprintf(strbuf, "%s/%s_%s_z.%d.syn", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
-		WeightMonitor * zmon =					\
-			new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 2);
-	}
+        // to count states (directly on data files): if x_i>0 s+=2^i
+        if (n_rec>0) {
+                sprintf(strbuf, "%s/%s_%s_x.%d.syn", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
+                WeightMonitor * xmon =                                  \
+                        new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 0);
+                sprintf(strbuf, "%s/%s_%s_y.%d.syn", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
+                WeightMonitor * ymon =                                  \
+                        new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 1);
+                sprintf(strbuf, "%s/%s_%s_z.%d.syn", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
+                WeightMonitor * zmon =                                  \
+                        new WeightMonitor(con, 0, n_rec, strbuf, monitor_time, DATARANGE, 2);
+        }
 
-	sprintf(strbuf, "%s/%s_%s.%d.ras", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
+        sprintf(strbuf, "%s/%s_%s.%d.ras", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
         SpikeMonitor * smon = new SpikeMonitor(neuron, strbuf);
 
-	sprintf(strbuf, "%s/%s_%s.%d.zyn", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
+        sprintf(strbuf, "%s/%s_%s.%d.zyn", dir.c_str(), file_prefix, protocol.c_str(), world.rank());
         ZynapseMonitor * zmon = new ZynapseMonitor(con, strbuf, monitor_time);
 
-	msg = "Simulating ...";
-	logger->msg(msg,PROGRESS,true);
+        msg = "Simulating ...";
+        logger->msg(msg,PROGRESS,true);
 
         // pre
+        tetanus->active = false;
         if (!sys->run(pretime, false) )
                 errcode = 1;
         // stimulus
         tetanus->active = true;
         if (!sys->run(time, false) )
                 errcode = 1;
-	if (dopamine) {
-		neuron->dopamine_on();
-		if (!sys->run(60, false) )
-			errcode = 1;
-		neuron->dopamine_off();
-		posttime -= 60;
-	}
-	// post
-	double remaining = posttime - time;
-	if (!sys->run(remaining, false) )
-		errcode = 1;
+        if (dopamine) {
+                neuron->dopamine_on();
+                if (!sys->run(60, false) )
+                        errcode = 1;
+                neuron->dopamine_off();
+                posttime -= 60;
+        }
+        // post
+        double remaining = posttime - time;
+        if (!sys->run(remaining, false) )
+                errcode = 1;
 
-	msg = "Freeing ...";
+        msg = "Freeing ...";
         logger->msg(msg,PROGRESS,true);
 
         delete sys;

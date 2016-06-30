@@ -319,14 +319,8 @@ void ZynapseConnection::random_data_potentiation(AurynFloat z_up, bool reset)
         }
 }
 
-// TODO check for RANDOM_SEED + gettimeofday
 void ZynapseConnection::seed(int s)
 {
-        // #ifdef RANDOM_SEED
-        //         timeval ss;
-        //         gettimeofday(&ss,NULL);
-        //         s += ss.tv_usec-100*(ss.tv_usec/100);
-        // #endif
         std::stringstream oss;
         oss << get_log_name() << "Seeding with " << s;
         auryn::logger->msg(oss.str(),VERBOSE);
