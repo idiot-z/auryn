@@ -107,39 +107,56 @@ void Connection::set_transmitter(TransmitterType transmitter)
 	if ( dst->evolve_locally() ) {
 		switch ( transmitter ) {
 			case GABA:
-				set_transmitter(dst->get_state_vector("g_gaba"));
+				set_target(dst->get_state_vector("g_gaba"));
 				break;
 			case MEM:
-				set_transmitter(dst->get_state_vector("mem"));
+				set_target(dst->get_state_vector("mem"));
 				break;
 			case CURSYN:
-				set_transmitter(dst->get_state_vector("g_cursyn"));
+				set_target(dst->get_state_vector("g_cursyn"));
 				break;
 			case NMDA:
-				set_transmitter(dst->get_state_vector("g_nmda"));
+				set_target(dst->get_state_vector("g_nmda"));
 				break;
 			case GLUT:
 			case AMPA:
 			default:
-				set_transmitter(dst->get_state_vector("g_ampa"));
+				set_target(dst->get_state_vector("g_ampa"));
 		}
-	} else set_transmitter((AurynWeight *)NULL);
+	} else set_target((AurynWeight *)NULL);
 }
 
-void Connection::set_transmitter(string state_name)
-{
-	set_transmitter(dst->get_state_vector(state_name));
-}
 
-void Connection::set_transmitter(AurynWeight * ptr)
+void Connection::set_target(AurynWeight * ptr)
 {
 	target = ptr;
 }
 
-void Connection::set_transmitter(AurynStateVector * ptr)
+void Connection::set_target(AurynStateVector * ptr)
 {
 	target_state_vector = ptr;
-	set_transmitter(ptr->data);
+	set_target(ptr->data);
+}
+
+void Connection::set_receptor(AurynStateVector * ptr)
+{
+	set_target(ptr);
+}
+
+void Connection::set_receptor(string state_name)
+{
+	set_receptor(dst->get_state_vector(state_name));
+}
+
+void Connection::set_target(string state_name)
+{
+	set_receptor(state_name);
+}
+
+
+void Connection::set_transmitter(string state_name)
+{
+	set_receptor(state_name);
 }
 
 AurynStateVector * Connection::get_target_vector()
@@ -228,6 +245,22 @@ AurynFloat Connection::get_spike_attribute(const NeuronID spike_array_pos, const
 
 	return src->get_attributes()->at(stackpos);
 }
+
+DEFAULT_TRACE_MODEL * Connection::get_pre_trace(const AurynDouble tau)
+{
+	return src->get_pre_trace(tau);
+}
+
+DEFAULT_TRACE_MODEL * Connection::get_post_trace(const AurynDouble tau)
+{
+	return dst->get_post_trace(tau);
+}
+
+DEFAULT_TRACE_MODEL * Connection::get_post_state_trace(const string state_name, const AurynDouble tau, const AurynDouble jump_size)
+{
+	return dst->get_post_state_trace(state_name, tau, jump_size);
+}
+
 
 void Connection::evolve() 
 {

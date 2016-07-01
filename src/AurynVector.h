@@ -79,37 +79,61 @@ namespace auryn {
 #endif 
 			}
 
+			/*! \brief Implements aligned memory allocation */
+			void allocate(const NeuronID n) {
+				T * ptr = (T*)aligned_alloc(sizeof(T)*SIMD_NUM_OF_PARALLEL_FLOAT_OPERATIONS,sizeof(T)*n);
+				if ( ptr == NULL ) {
+					// TODO implement proper exception handling
+					throw AurynMemoryAlignmentException(); 
+				}
+				data = ptr;
+				size = n;
+				set_zero();
+			}
+
+			void freebuf() {
+				free(data);
+			}
+		protected:
+
 		public:
-			// We keep these params public for legacy compatibility reasons
 			IndexType size;
-			T * data __attribute__((aligned(16)));
+			T * data;
 
 			/*! \brief Default constructor */
 			AurynVector(IndexType n) 
 			{
-				size = n;
-				data = new T [n];
-				set_zero(); // let's give it a defined initial value
+				allocate(n);
 			}
+
+			/*! \brief Copy constructor 
+			 *
+			 * Constructs vector as a copy of argument vector. */
+			AurynVector(AurynVector * vec) 
+			{
+				allocate(vec->size);
+				copy(vec);
+			}
+
 
 			/*! \brief Default destructor */
 			virtual ~AurynVector() 
 			{
-				delete data;
+				freebuf();
 			}
 
 			/*! \brief resize data array to new_size */
 			void resize(IndexType new_size) 
 			{
 				if ( size != new_size ) {
-					delete [] data;
-					data = new T [new_size];
-					set_zero(); 
+					freebuf();
+					allocate(new_size);
 				}
+				set_zero(); 
 			}
 
 			/*! \brief Set all elements to value v. */
-			virtual void set_all(T v) 
+			void set_all(T v) 
 			{
 				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] = v;
@@ -117,21 +141,49 @@ namespace auryn {
 			}
 
 			/*! \brief Set all elements to zero. */
-			virtual void set_zero() 
+			void set_zero() 
 			{
 				set_all(0.0);
 			}
 
 			/*! \brief Scales all vector elements by a. */
-			virtual void scale(AurynFloat a) 
+			virtual void scale(const AurynFloat a) 
 			{
 				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] *= a;
 				}
 			}
 
+			/*! \brief Scales all vector elements by a. TODO */
+			void follow(AurynVector<T,IndexType> * v, const float rate) 
+			{
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					data[i] += rate*(v->data[i]-data[i]);
+				}
+			}
+
+			/*! \brief Takes each element to the n-th power. 
+			 *
+			 * \param n the exponent */
+			void pow(const unsigned int n) 
+			{
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					data[i] = std::pow(data[i],n);
+				}
+			}
+
+			/*! \brief Takes the square root of each element  
+			 *
+			 * */
+			void sqrt() 
+			{
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					data[i] = std::sqrt(data[i]);
+				}
+			}
+
 			/*! \brief Adds constant c to each vector element */
-			virtual void add(AurynFloat c) 
+			virtual void add(const AurynFloat c) 
 			{
 				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] += c;
@@ -139,7 +191,7 @@ namespace auryn {
 			}
 
 			/*! \brief Adds the value c to specific vector element i */
-			virtual void add_specific(IndexType i, AurynFloat c) 
+			void add_specific(const IndexType i, const AurynFloat c) 
 			{
 				check_size(i);
 				data[i] += c;
@@ -148,7 +200,7 @@ namespace auryn {
 			/*! \brief Adds a vector v to the vector
 			 *
 			 * No checking of the dimensions match! */
-			virtual void add(AurynVector * v) 
+			void add(AurynVector * v) 
 			{
 				check_size(v);
 				for ( IndexType i = 0 ; i < size ; ++i ) {
@@ -157,13 +209,13 @@ namespace auryn {
 			}
 
 			/*! \brief Subtract constant c to each vector element */
-			virtual void sub(AurynFloat c) 
+			void sub(const AurynFloat c) 
 			{
 				add(-c);
 			}
 
 			/*! \brief Elementwise subtraction */
-			virtual void sub(AurynVector * v) 
+			void sub(AurynVector * v) 
 			{
 				check_size(v);
 				for ( IndexType i = 0 ; i < size ; ++i ) {
@@ -172,7 +224,7 @@ namespace auryn {
 			}
 
 			/*! \brief Multiply all vector elements by constant */
-			virtual void mul(AurynFloat a) 
+			void mul(const AurynFloat a) 
 			{
 				scale(a);
 			}
@@ -180,7 +232,7 @@ namespace auryn {
 			/*! \brief Element-wise vector multiply  
 			 *
 			 * */
-			virtual void mul(AurynVector * v) 
+			void mul(AurynVector * v) 
 			{
 				check_size(v);
 				for ( IndexType i = 0 ; i < size ; ++i ) {
@@ -188,15 +240,57 @@ namespace auryn {
 				}
 			}
 
+			/*! \brief Computes the sum a+b and stores the result in this instance 
+			 *
+			 * */
+			void sum(AurynVector * a, AurynVector * b) 
+			{
+				check_size(a);
+				check_size(b);
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					data[i] = a->data[i]+b->data[i];
+				}
+			}
+
+			/*! \brief Computes the sum a+b and stores the result in this instance 
+			 *
+			 * */
+			void sum(AurynVector * a, const AurynState b) 
+			{
+				check_size(a);
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					data[i] = a->data[i]+b;
+				}
+			}
+
+			/*! \brief Computes the difference a-b and stores the result in this instance 
+			 *
+			 * */
+			void diff(AurynVector * a, AurynVector * b) 
+			{
+				check_size(a);
+				check_size(b);
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					data[i] = a->data[i]-b->data[i];
+				}
+			}
+
+			/*! \brief Computes the difference a-b and stores the result in this instance 
+			 *
+			 * */
+			void diff(AurynVector * a, const AurynState b) 
+			{
+				sum(a,-b);
+			}
+
+
 			/*! \brief Copies vector v 
 			 *
 			 * */
-			virtual void copy(AurynVector * v) 
+			void copy(AurynVector * v) 
 			{
 				check_size(v);
-				for ( IndexType i = 0 ; i < size ; ++i ) {
-					data[i] = v->data[i];
-				}
+				std::copy(v->data, v->data+v->size, data);
 			}
 
 
@@ -206,7 +300,7 @@ namespace auryn {
 			 * \param a The scaling factor for the additional vector
 			 * \param x The additional vector to add
 			 * */
-			virtual void saxpy(AurynFloat a, AurynVector * x) 
+			virtual void saxpy(const AurynFloat a, AurynVector * x) 
 			{
 				check_size(x);
 				for ( IndexType i = 0 ; i < size ; ++i ) {
@@ -238,11 +332,33 @@ namespace auryn {
 				data[i] = value;
 			}
 
-			/*! \brief Squares each element */
-			void sqr()
+			/*! \brief Squares each element 
+			 *
+			 * */
+			void sqr() 
+			{	
+				this->mul(this);
+			}
+
+			/*! \brief Rectifies all elements
+			 */
+			void rect()
 			{
 				for ( IndexType i = 0 ; i < size ; ++i ) {
-					data[i] = data[i]*data[i];
+					if ( data[i] < 0.0 ) {
+						 data[i] = 0.0;
+					} 
+				}
+			}
+
+			/*! \brief Negatively rectifies all elements
+			 */
+			void neg_rect()
+			{
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					if ( data[i] > 0.0 ) {
+						 data[i] = 0.0;
+					} 
 				}
 			}
 
@@ -251,7 +367,7 @@ namespace auryn {
 			 * \param min Minimum value
 			 * \param max Maximum value
 			 */
-			void clip(T min, T max)
+			virtual void clip(T min, T max)
 			{
 				for ( IndexType i = 0 ; i < size ; ++i ) {
 					if ( data[i] < min ) {
@@ -260,6 +376,57 @@ namespace auryn {
 						if ( data[i] > max ) 
 							 data[i] = max;
 				}
+			}
+
+			/*! \brief Computes the variance of the vector elements 
+			 *
+			 * Uses Bessel's correction to calculate an unbiased estimate of the population variance which 
+			 * requires n > 1 otherwise the output is not defined.
+			 */
+			double var()
+			{
+				double sum = 0.0;
+				double sum2 = 0.0;
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					double elem = get(i);
+					sum  += elem;
+					sum2 += std::pow(elem,2);
+				}
+				double var  = (sum2-(sum*sum)/size)/(size-1);
+				return var;
+			}
+
+
+			/*! \brief Computes the standard deviation of all elements
+			 *
+			 */
+			double std()
+			{
+				return std::sqrt(var());
+			}
+
+			/*! \brief Computes the mean of the vector elements
+			 *
+			 */
+			double mean()
+			{
+				double sum = 0.0;
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					sum += get(i);
+				}
+				return sum/size;
+			}
+
+			/*! \brief Computes number of nonzero elements
+			 *
+			 */
+			IndexType nonzero()
+			{
+				IndexType sum = 0;
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					if ( get(i) != 0 ) ++sum;
+				}
+				return sum;
 			}
 
 			/*! \brief Print vector elements to std out for debugging */
@@ -279,6 +446,7 @@ namespace auryn {
 	 */
 	class AurynVectorFloat : public AurynVector<float,NeuronID> 
 	{
+		private:
 
 		public:
 			/*! \brief Default constructor */
@@ -289,14 +457,22 @@ namespace auryn {
 			{
 			};
 
-			void scale(float a);
-			void saxpy(float a, AurynVectorFloat * x);
-			void clip(float min, float max);
-			void add(float c);
+
+			void scale(const float a);
+			void saxpy(const float a, AurynVectorFloat * x);
+			void clip(const float min, const float max);
+			void add(const float c);
 			void add(AurynVectorFloat * v);
+			void sum(AurynVectorFloat * a, AurynVectorFloat * b);
+			void sum(AurynVectorFloat * a, const AurynState b);
+			void diff(AurynVectorFloat * a, AurynVectorFloat * b);
+			void diff(AurynVectorFloat * a, const AurynState b);
 
 
-			void mul(float a) { scale(a); };
+			// TODO add pow function with intrinsics _mm_pow_ps
+
+
+			void mul(const float a) { scale(a); };
 			void mul(AurynVectorFloat * v);
 
 	};

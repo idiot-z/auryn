@@ -102,6 +102,10 @@ void Logger::msg( std::string text, LogMessageType type, bool global, int line, 
 	last_message = text;
 }
 
+void Logger::progress( std::string text )
+{
+	msg(text, PROGRESS, true);
+}
 
 void Logger::info( std::string text )
 {
@@ -131,29 +135,6 @@ void Logger::verbose( std::string text, bool global, int line, std::string srcfi
 void Logger::debug( std::string text, bool global, int line, std::string srcfile )
 {
 	msg(text, VERBOSE, global, line, srcfile );
-}
-
-
-void Logger::parameter(std::string name, double value) 
-{
-	std::stringstream oss;
-	oss << std::scientific << "  Parameter " << name << "=" << value;
-	msg(oss.str(),SETTINGS,true);
-}
-
-void Logger::parameter(std::string name, int value) 
-{
-	std::stringstream oss;
-	oss << std::scientific << "Setting " << name << "=" << value;
-	msg(oss.str(),SETTINGS,true);
-}
-
-void Logger::parameter(std::string name, std::string value) 
-{
-	std::stringstream oss;
-	oss.precision(9);
-	oss << std::scientific << "Setting " << name << "=" << value;
-	msg(oss.str(),SETTINGS,true);
 }
 
 void Logger::set_rank(int rank)

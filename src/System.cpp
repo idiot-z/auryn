@@ -561,6 +561,11 @@ void System::set_simulation_name(std::string name)
 	simulation_name = name;
 }
 
+std::string System::get_simulation_name()
+{
+	return simulation_name;
+}
+
 void System::set_output_dir(std::string path)
 {
 	outputdir = path;
@@ -573,6 +578,22 @@ string System::fn(std::string name, std::string extension)
 	<< "." << mpicom->rank()
 	<< "." << extension;
 	return oss.str();
+}
+
+string System::fn(std::string name, NeuronID index, std::string extension)
+{
+	std::stringstream oss;
+	oss << outputdir << "/" 
+		<< name
+		<< index
+		<< "." << mpicom->rank()
+		<< "." << extension;
+	return oss.str();
+}
+
+string System::fn(std::string extension)
+{
+	return fn(get_simulation_name(), extension);
 }
 
 void System::save_network_state(std::string basename)
