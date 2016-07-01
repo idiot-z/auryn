@@ -291,7 +291,7 @@ int main(int ac, char* av[])
 
         FileInputGroup * tetanus = new FileInputGroup(n_in, strbuf);
 
-        AIFGroup * neuron = new AIFGroup(n_out);
+        PRPGroup * neuron = new PRPGroup(n_out);
 
         msg =  "Setting up E connections ...";
         logger->msg(msg,PROGRESS,true);

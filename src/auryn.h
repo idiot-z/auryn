@@ -86,7 +86,7 @@
 #include "AuditoryBeepGroup.h"
 #include "StimulusGroup.h"
 #include "FileInputGroup.h"
-
+#include "PRPGroup.h"
 
 // Checker definitions
 #include "Checker.h"

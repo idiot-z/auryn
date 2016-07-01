@@ -174,7 +174,7 @@ void ZynapseConnection::integrate()
         for (AurynLong i = 0 ; i < w->get_nonzero() ; ++i ) {
                 AurynWeight xyi = x[i] - y[i],
                         yzi = y[i] - z[i],
-                        prot = dst->get_protein();
+                        prot = dst->get_prp();
                 AurynInt gxy;
                 if (tr_gxy->get(i)>THETAG) gxy = 1;
                 else gxy = 0;
@@ -189,7 +189,6 @@ void ZynapseConnection::integrate()
                                   TILT*prot*yzi
                                   ) + eta*(*die)();
         }
-        dst->update_protein();
 }
 
 void ZynapseConnection::propagate_forward()
@@ -365,7 +364,7 @@ AurynFloat ZynapseConnection::get_g(NeuronID i)
 
 AurynFloat ZynapseConnection::get_protein()
 {
-        return dst->get_protein();
+        return dst->get_prp();
 }
 
 void ZynapseConnection::g_stats(AurynDouble &mean, AurynDouble &std)

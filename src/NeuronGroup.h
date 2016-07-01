@@ -40,10 +40,6 @@
 #include <boost/random/variate_generator.hpp>
 #include <boost/random/normal_distribution.hpp>
 
-/* protein constants */
-#define TAU_UP 1.
-#define TAU_DOWN 7200.
-
 namespace auryn {
 
 /*! \brief Abstract base class for all neuron groups.
@@ -61,10 +57,7 @@ protected:
 	/*! Called by default destructor */
 	void free();
 
-	/*! protein for consolidation processes */
-	AurynTime protein_timestamp;
-	AurynFloat protein;
-	bool dopamine;
+
 
 
 public:
@@ -111,12 +104,6 @@ public:
 	/*! Adds given amount of transmitter to neuron state/id. */
 	void tadd(AurynStateVector * state, NeuronID id, AurynWeight amount);
 
-	void update_protein();
-	void dopamine_on();
-	void dopamine_off();
-	AurynFloat get_protein();
-	void set_protein(AurynFloat value);
-	AurynFloat *get_protein_ptr();
 };
 
 }
