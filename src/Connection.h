@@ -152,15 +152,30 @@ public:
 	TransmitterType get_transmitter();
 
 	/*! \brief Sets target state of this connection directly via a pointer */
-	void set_transmitter(AurynWeight * ptr);
+	void set_target(AurynWeight * ptr);
 
 	/*! \brief Sets target state of this connection directly via a StateVector */
+	void set_target(AurynStateVector * ptr);
+
+	/*! \brief Same as set_target */
+	void set_receptor(AurynStateVector * ptr);
+
+	/*! \brief Same as set_target */
 	void set_transmitter(AurynStateVector * ptr);
 
-	/*! \brief Sets target state of this connection as one of Auryn's default transmitter types */
+	/*! \brief Sets target state of this connection for a given receptor as one of Auryn's default transmitter types 
+	 *
+	 * The most common transmitter types are GLUT and GABA. The postsynaptic NeuronGroup needs to make use of the g_ampa or g_gaba state 
+	 * vectors (AurynStateVector) for this to work. */
 	void set_transmitter(TransmitterType transmitter);
 
 	/*! \brief Sets target state of this connection directly the name of a state vector */
+	void set_receptor(string state_name);
+
+	/*! \brief Same as set_receptor */
+	void set_target(string state_name);
+
+	/*! \brief Same as set_receptor, but DEPRECATED */
 	void set_transmitter(string state_name);
 
 	/*! \brief Sets source SpikingGroup of this connection. */
@@ -204,8 +219,15 @@ public:
 	 * Calls propagate only if the postsynaptic NeuronGroup exists on the local rank. */
 	void conditional_propagate();
 
-	/*! \brief Computes the sum of all weights in the connection. */
-	virtual AurynDouble sum() = 0;
+
+	/*! \brief Returns a pointer to a presynaptic trace object */
+	DEFAULT_TRACE_MODEL * get_pre_trace(const AurynDouble tau);
+
+	/*! \brief Returns a pointer to a postsynaptic trace object */
+	DEFAULT_TRACE_MODEL * get_post_trace(const AurynDouble tau);
+
+	/*! \brief Returns a pointer to a postsynaptic state trace object */
+	DEFAULT_TRACE_MODEL * get_post_state_trace(const string state_name, const AurynDouble tau, const AurynDouble jump_size=0.0);
 
 	/*! \brief Computes mean synaptic weight and std dev of all weights in this connection. */
 	virtual void stats(AurynDouble &mean, AurynDouble &std, StateID zid = 0) = 0;
@@ -228,10 +250,6 @@ public:
 	/*! \brief Same as transmit but first checks if the target neuron exists and avoids segfaults that way (but it's also slower). */
 	void safe_transmit(NeuronID id, AurynWeight amount);
 
-	/*! Returns a vector of ConnectionsID of a block specified by the arguments. */
-	virtual std::vector<neuron_pair>  get_block(NeuronID lo_row, NeuronID lo_col, NeuronID hi_row,  NeuronID hi_col) = 0;
-
-	
 	/*! \brief Supplies pointer to SpikeContainer of all presynaptic spikes.
 	 *
 	 * This includes spikes from this group from all other nodes. 
@@ -262,7 +280,7 @@ BOOST_SERIALIZATION_ASSUME_ABSTRACT(Connection)
 
 inline void Connection::transmit(NeuronID id, AurynWeight amount) 
 {
-	NeuronID localid = dst->global2rank(id);
+	const NeuronID localid = dst->global2rank(id);
 	target_state_vector->data[localid]+=amount;
 }
 }

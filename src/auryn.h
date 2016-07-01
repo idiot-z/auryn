@@ -64,6 +64,7 @@
 #include "TripletScalingConnection.h"
 #include "IdentityConnection.h"
 #include "ZynapseConnection.h"
+#include "AllToAllConnection.h"
 
 // Spiking and Neuron group definitions
 #include "AIF2Group.h"

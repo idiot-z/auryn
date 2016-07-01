@@ -360,6 +360,7 @@ PRE_TRACE_MODEL * SpikingGroup::get_pre_trace( AurynFloat x )
 		}
 	}
 
+	auryn::logger->msg("Initializing pre trace instance",VERBOSE);
 #ifndef PRE_TRACE_MODEL_LINTRACE
 	DEFAULT_TRACE_MODEL * tmp = new DEFAULT_TRACE_MODEL(get_pre_size(),x);
 #else
@@ -381,6 +382,7 @@ DEFAULT_TRACE_MODEL * SpikingGroup::get_post_trace( AurynFloat x )
 	}
 
 
+	auryn::logger->msg("Initializing post trace instance",VERBOSE);
 	DEFAULT_TRACE_MODEL * tmp = new DEFAULT_TRACE_MODEL(get_post_size(),x);
 	posttraces.push_back(tmp);
 	return tmp;
@@ -412,7 +414,7 @@ EulerTrace * SpikingGroup::get_post_state_trace( AurynStateVector * state, Auryn
 
 	// trace does not exist yet, so we are creating 
 	// it and do the book keeping
-	auryn::logger->msg("Creating new post state trace",VERBOSE);
+	auryn::logger->msg("Initializing post trace instance",VERBOSE);
 	EulerTrace * tmp = new EulerTrace(get_post_size(),tau);
 	tmp->set_target(state);
 	post_state_traces.push_back(tmp);
@@ -611,6 +613,10 @@ void SpikingGroup::virtual_serialize(boost::archive::binary_oarchive & ar, const
 	}
 
 	oss.str("");
+	oss << get_log_name() << " serializing " << state_variables.size() << " state variables";
+	ar & state_variables;
+
+	oss.str("");
 	oss << get_log_name() << " serializing " << pretraces.size() << " pre traces";
 	auryn::logger->msg(oss.str(),VERBOSE);
 	for ( NeuronID i = 0 ; i < pretraces.size() ; ++i )
@@ -646,6 +652,10 @@ void SpikingGroup::virtual_serialize(boost::archive::binary_iarchive & ar, const
 		AurynStateVector * vect = find_state_vector(key);
 		ar & *vect;
 	}
+
+	oss.str("");
+	oss << get_log_name() << " reading " << state_variables.size() << " state variables";
+	ar & state_variables; 
 
 	oss.str("");
 	oss << get_log_name() << " reading " << pretraces.size() << " pre traces";
@@ -839,3 +849,13 @@ int SpikingGroup::get_num_spike_attributes()
 {
 	return delay->get_num_attributes();
 }
+
+
+AurynState * SpikingGroup::get_state_variable(std::string key)
+{
+	if ( state_variables.find(key) == state_variables.end() ) {
+		state_variables[key] = 0.0;
+	} 
+	return &(state_variables.find(key)->second);
+}
+

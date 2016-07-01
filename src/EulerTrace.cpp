@@ -126,6 +126,7 @@ void EulerTrace::inc(NeuronID i)
 
 AurynFloat EulerTrace::normalized_get(NeuronID i)
 {
+	check_size(i);
 	return state->get( i ) / tau ;
 }
 

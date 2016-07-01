@@ -42,6 +42,32 @@ namespace auryn {
  * spikes.  Memory has to be reserved when the class is defined and elements can
  * only be inserted row by row starting from "left to right". This scheme
  * enables related data fields to reside in memory next to each other.
+ *
+ * ComplexMatrix generalizes SimpleMatrix to a rank 3 tensor in which each synaptic 
+ * connection can have more than one value (third tensor mode -- corresponding 
+ * to a synaptic state). This allows to efficiently implement state based complex 
+ * synaptic models which have their own internal dynamics. 
+ *
+ * Instead of storing all synaptic data values in one long array the synaptic state 
+ * values are stored in multiple state vectors which can be manipulated efficiently
+ * in a vector based manner.
+ *
+ * For instance, suppose w holds your instance of ComplexMatris in which you have 
+ * set_num_synapse_states(3) which makes it a connectivity matrix which reserves three
+ * state variables of type AurynWeight per synaptic connection. Now, decaying all elements 
+ * of, say, state 3 by a factor "foo" is as simple as w->get_state_vector(2)->scale(foo).
+ * Adding two of the states for all synapses becomes 
+ * w->get_state_vector(2)->add(w->get_state_vector(3)).
+ *
+ * Because these expressions become quickly rather lenghty it is nice to declare shortcuts
+ * in your plastic Connection class such as:
+ * AurynSynStateVector * w_val = w->get_state_vector(0);
+ * AurynSynStateVector * tagging_val = w->get_state_vector(1);
+ * AurynSynStateVector * scaffold_val = w->get_state_vector(2);
+ *
+ * You can now work with these as you are used with AurynVector or AurynStateVector instances 
+ * w_val->saxpy(foo,tagging_val)
+ *
  */
 
 
@@ -79,6 +105,8 @@ private:
 	template<class Archive>
 	void load(Archive & ar, const unsigned int version)
 		{
+			const StateID cur_num_syn_states = get_num_synaptic_states();
+
 			ar & m_rows;
 			ar & n_cols;
 			ar & n_z_values;
@@ -86,6 +114,10 @@ private:
 			ar & current_col;
 			ar & statesize;
 			ar & n_nonzero;
+
+			if ( n_z_values != cur_num_syn_states ) { // check if we have the some number of tensor modes
+				throw AurynMatrixComplexStateException();
+			}
 
 			// allocate necessary memory
 			resize_buffers(statesize);
@@ -131,12 +163,6 @@ protected:
 	/*! \brief Returns a synaptic state vector. */
 	AurynVector<T,AurynLong> * alloc_synaptic_state_vector();
 
-	/*! \brief Returns pointer to statevector which is an AurynVector of specified synaptic state */
-	AurynVector<T,AurynLong> * get_synaptic_state_vector(StateID z=0);
-
-	/*! \brief Sames as get_synaptic_state_vector(StateID z) */
-	AurynVector<T,AurynLong> * get_state_vector(StateID z=0);
-
 	/*! \brief Matches size of statevectors to number of synaptic states.  */
 	void prepare_state_vectors();
 
@@ -148,12 +174,26 @@ public:
 	/*! \brief Vector that holds pointers to the state vectors storing the synaptic states. */
 	std::vector< AurynVector<T,AurynLong> * > statevectors;
 
+	/*! \brief Empty constructor */
 	ComplexMatrix();
+
+	/*! \brief Copy constructor */
 	ComplexMatrix(ComplexMatrix * mat);
-	ComplexMatrix(NeuronID rows, NeuronID cols, AurynLong size=256, NeuronID values=1 );
+
+	/*! \brief Default constructor */
+	ComplexMatrix(NeuronID rows, NeuronID cols, AurynLong size=256, StateID n_values=1 );
+
+	/*! \brief Default destructor */
 	virtual ~ComplexMatrix();
 
+	/*! \brief Clears matrix */
 	void clear();
+
+	/*! \brief Returns pointer to statevector which is an AurynVector of specified synaptic state */
+	AurynVector<T,AurynLong> * get_synaptic_state_vector(StateID z=0);
+
+	/*! \brief Sames as get_synaptic_state_vector(StateID z) */
+	AurynVector<T,AurynLong> * get_state_vector(StateID z=0);
 
 	/*! \brief Resizes one state vector and copies existing data 
 	 * */
@@ -179,7 +219,7 @@ public:
 	 * \param j col index where to insert element
 	 * \param value to insert
 	 * \throw AurynMatrixBufferException */
-	void push_back(NeuronID i, NeuronID j, T value);
+	void push_back(const NeuronID i, const NeuronID j, const T value);
 
 	/*! \brief Copies complex matrix mat */
 	void copy(ComplexMatrix * mat);
@@ -200,30 +240,48 @@ public:
 
 	/*! Gets the matching data entry for a given index i and state z*/
 	T get_data(AurynLong i, StateID z=0);
-	/*! Gets the matching data ptr for a given index i and state z*/
-	T * get_data_ptr(AurynLong data_index, StateID z=0);
-	/*! Gets the matching data ptr for a given index pointer and state z*/
-	T * get_data_ptr(const NeuronID * ind_ptr, StateID z=0);
-	/*! Gets the matching data value for a given index pointer and state z*/
+
+	/*! \brief Gets the matching data ptr for a given index i and state z*/
+	T * get_data_ptr(const AurynLong data_index, const StateID z=0);
+	/*! \brief Gets the matching data ptr for a given index pointer and state z*/
+	T * get_data_ptr(const NeuronID * ind_ptr, const StateID z=0);
+
+	/*! \brief Gets the matching data value for a given index pointer and state z*/
 	T get_data(const NeuronID * ind_ptr, StateID z=0);
+
+	/*! \brief Pads non-existing elements for the remaining elements to a matrix
+	 *
+	 * This function has to be called after filling the matrix with elements e.g. random sparse
+	 * and before using it in a simulation. It is typically called by the finalize function in 
+	 * SparseConnection. */
 	void fill_zeros();
+
+
+	/*! \brief Returns the fill level of the matrix element buffer 
+	 *
+	 * A fill level of 1.0 corresponds to the sparse matrix element buffer
+	 * being full.*/
 	AurynDouble get_fill_level();
 
 	/*! \brief Value of synaptic state variable i,j,z returns zero if the element is zero or does not exist. */
-	T get(NeuronID i, NeuronID j, NeuronID z=0);
+	T get(const NeuronID i, const NeuronID j, const NeuronID z=0);
 
 	/*! \brief Returns true if the matrix element exists. */
-	bool exists(NeuronID i, NeuronID j, StateID z=0);
+	bool exists(const NeuronID i, const NeuronID j, const StateID z=0);
 
 	/*! \brief Returns the pointer to a particular element */
-	T * get_ptr(NeuronID i, NeuronID j, StateID z=0);
+	T * get_ptr(const NeuronID i, const NeuronID j, const StateID z=0);
 
-	/*! \brief Returns the pointer to a particular element given 
+	/*! \brief Same as get_data_ptr. Returns the pointer to a particular element given 
 	 * its position in the data array. */
-	T * get_ptr(AurynLong data_index);
+	T * get_ptr(const AurynLong data_index, const StateID z=0);
+
+	/*! \brief Returns a particular element given 
+	 * its position in the data array. */
+	T get_element(const AurynLong data_index, const StateID z);
 
 	/*! Returns data index to a particular element specifed by i and j */
-	AurynLong get_data_index(NeuronID i, NeuronID j);
+	AurynLong get_data_index(const NeuronID i, const NeuronID j);
 	/*! \brief Returns data index to a particular element specifed by an index pointer */
 	AurynLong get_data_index(const NeuronID * ind_ptr);
 	/*! \brief Returns data index to a particular element specifed by a data pointer */
@@ -232,7 +290,9 @@ public:
 	/* Methods concerning synaptic state vectors. */
 
 	/*!\brief Sets number of synaptic states (z-value) */
-	void set_num_synapse_states(StateID zsize);
+	void set_num_synaptic_states(const StateID zsize);
+	/*!\brief Sets number of synaptic states (z-value) */
+	void set_num_synapse_states(const StateID zsize);
 	/*!\brief Returns number of synaptic states (z-value) */
 	StateID get_num_synaptic_states();
 	/*!\brief Returns number of synaptic states (z-value) */
@@ -241,13 +301,13 @@ public:
 	StateID get_num_synapse_states();
 
 	/*! \brief Gets pointer for the first element of a given synaptic state vector */
-	T * get_state_begin(StateID z=0);
+	T * get_state_begin(const StateID z=0);
 	/*! \brief Gets pointer for the element behind the last of a given synaptic state vector */
-	T * get_state_end(StateID z=0);
+	T * get_state_end(const StateID z=0);
 	/*! \brief Sets all values in state x to value. */
-	void state_set_all(T * x, T value);
+	void state_set_all(T * x, const T value);
 	/*! \brief Computes a*x + y and stores result in y */
-	void state_saxpy(T a, T * x, T * y);
+	void state_saxpy(const T a, T * x, T * y);
 	/*! \brief Multiplies x and y and stores result in y */
 	void state_mul(T * x, T * y);
 	/*! \brief Adds x and y and stores result in y */
@@ -257,31 +317,32 @@ public:
 	/*! \brief Computes x-y and stores result in res */
 	void state_sub(T * x, T * y, T * res);
 	/*! \brief Scale state x by a. */
-	void state_scale(T a, T * x);
+	void state_scale(const T a, T * x);
 	/*! \brief Adds constant a to all values in x */
-	void state_add_const(T a, T * x);
+	void state_add_const(const T a, T * x);
 	/*! \brief Clips state values to interval [a,b] */
-	void state_clip(T * x, T a, T b);
+	void state_clip(T * x, const T a, const T b);
 	/*! \brief Get data pointer for that state */
 	T * state_get_data_ptr(T * x, NeuronID i);
 
 
-	void add_value(AurynLong data_index, T value);
-	NeuronID get_colind(AurynLong data_index);
-	bool set(NeuronID i, NeuronID j, T value);
+	void add_value(const AurynLong data_index, T value);
+	NeuronID get_colind(const AurynLong data_index);
+
+	bool set(const NeuronID i, const NeuronID j, T value);
 	/*! \brief Sets all non-zero elements to value */
-	void set_all(T value);
+	void set_all(const T value, const StateID z=0);
 	/*! \brief Sets all non-zero elements in row i to value */
-	void set_row(NeuronID i, T value);
+	void set_row(const NeuronID i, const T value);
 	/*! \brief Scales all non-zero elements in row i to value */
-	void scale_row(NeuronID i, T value);
+	void scale_row(const NeuronID i, const T value);
 	/*! \brief Scales all non-zero elements */
-	void scale_all(T value);
+	void scale_all(const T value);
 	/*! \brief Sets all non-zero elements in col j to value. Due to ordering this is slow and the use of this functions is discouraged. */
-	void set_col(NeuronID j, T value);
+	void set_col(const NeuronID j, const T value);
 	/*! \brief Scales all non-zero elements in col j to value. Due to ordering this is slow and the use of this functions is discouraged. */
-	void scale_col(NeuronID j, T value);
-	double sum_col(NeuronID j);
+	void scale_col(const NeuronID j, const T value);
+	double sum_col(const NeuronID j);
 	/*! \brief Returns datasize: number of possible entries */
 	AurynLong get_datasize();
 	/*! \brief Same as datasize : number of possible entries */
@@ -292,7 +353,9 @@ public:
 	AurynLong get_nonzero();
 	/*! \brief stdout dump of all elements -- for testing only. */
 	void print();
+	/*! \brief Return mean value of elements for the first complex state (z=0). */
 	double mean();
+
 	NeuronID * get_ind_begin();
 	NeuronID * get_row_begin(NeuronID i);
 	AurynLong get_row_begin_index(NeuronID i);
@@ -306,11 +369,11 @@ public:
 	/*! \brief Returns pointer to data value corresponding to the element behind the last nonzero element. */
 	T * get_data_end(const StateID z=0);
 	/*! \brief Returns the data value to an item that is i-th in the colindex array */
-	T get_value(AurynLong data_index);
+	T get_value(const AurynLong data_index);
 	/*! \brief Returns the data value to an item that for pointer r pointing to the respective element in the index array */
 	T get_value(NeuronID * r);
 	/*! \brief Returns pointer to the the data value to an item that is i-th in the colindex array */
-	T * get_value_ptr(NeuronID i);
+	T * get_value_ptr(const NeuronID i);
 	/*! \brief Returns the pointer to the data value to an item that for pointer r pointing to the respective element in the index array */
 	T * get_value_ptr(NeuronID * r);
 	NeuronID get_data_offset(NeuronID * r);
@@ -339,6 +402,12 @@ template <typename T>
 T ComplexMatrix<T>::get_data(const NeuronID * ind_ptr, StateID z) 
 {
 	return *(get_data_ptr(ind_ptr,z));
+}
+
+template <typename T>
+T ComplexMatrix<T>::get_element(const AurynLong data_index, const StateID z)
+{
+	return *get_data_ptr(data_index);
 }
 
 template <typename T>
@@ -490,9 +559,9 @@ ComplexMatrix<T>::ComplexMatrix(ComplexMatrix * mat)
 }
 
 template <typename T>
-ComplexMatrix<T>::ComplexMatrix(NeuronID rows, NeuronID cols, AurynLong statesize, NeuronID values )
+ComplexMatrix<T>::ComplexMatrix(NeuronID rows, NeuronID cols, AurynLong statesize, StateID n_values )
 {
-	init(rows, cols, statesize, values);
+	init(rows, cols, statesize, n_values);
 }
 
 template <typename T>
@@ -604,11 +673,17 @@ bool ComplexMatrix<T>::exists(NeuronID i, NeuronID j, NeuronID z)
 }
 
 template <typename T>
-void ComplexMatrix<T>::set_num_synapse_states(StateID zsize)
+void ComplexMatrix<T>::set_num_synaptic_states(StateID zsize)
 {
 	n_z_values = zsize;
 	prepare_state_vectors();
 	resize_buffers(statesize);
+}
+
+template <typename T>
+void ComplexMatrix<T>::set_num_synapse_states(StateID zsize)
+{
+	set_num_synaptic_states(zsize);
 }
 
 template <typename T>
@@ -718,11 +793,11 @@ T ComplexMatrix<T>::get(NeuronID i, NeuronID j, StateID z)
 }
 
 template <typename T>
-T * ComplexMatrix<T>::get_ptr(AurynLong data_index)
+T * ComplexMatrix<T>::get_ptr(const AurynLong data_index, const StateID z)
 {
-	T * data_z0 = get_synaptic_state_vector(0)->data;
-	return data_z0+data_index;
+	return get_data_ptr(data_index, z);
 }
+
 
 template <typename T>
 T ComplexMatrix<T>::get_value(AurynLong data_index)
@@ -786,10 +861,9 @@ void ComplexMatrix<T>::set_row(NeuronID i, T value)
 }
 
 template <typename T>
-void ComplexMatrix<T>::set_all(T value)
+void ComplexMatrix<T>::set_all(T value, StateID z)
 {
-	for ( AurynLong i = 0 ; i < n_nonzero ; ++i ) 
-		set_data( i , value );
+	get_state_vector(z)->set_all(value);
 }
 
 template <typename T>
