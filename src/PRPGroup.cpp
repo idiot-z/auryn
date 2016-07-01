@@ -34,11 +34,6 @@ PRPGroup::PRPGroup( NeuronID size, AurynFloat load, NeuronID total )
         if ( evolve_locally() ) init();
 }
 
-void PRPGroup::calculate_scale_constants()
-{
-        scale_thr = exp(-dt/tau_thr) ;
-}
-
 void PRPGroup::init()
 {
         tau_thr = 5e-3;
@@ -73,6 +68,8 @@ PRPGroup::~PRPGroup()
 }
 
 void PRPGroup::update_prp() {
+        if (!evolve_locally()) return;
+	
         AurynTime timediff = *clock_ptr-prp_timestamp;
         if (timediff<=0) return;
         if (dopamine)
@@ -102,8 +99,8 @@ void PRPGroup::set_prp(AurynState value)
 
 AurynState PRPGroup::get_prp()
 {
-        update_prp()
-                return *prp;
+        update_prp();
+	return *prp;
 }
 
 AurynState * PRPGroup::get_prp_ptr()

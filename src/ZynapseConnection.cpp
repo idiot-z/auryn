@@ -34,7 +34,7 @@ bool ZynapseConnection::has_been_seeded = false;
  *** constructors ***
  ********************/
 
-ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
+ZynapseConnection::ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
                                      TransmitterType transmitter)
         : DuplexConnection(source, destination, transmitter)
 
@@ -42,7 +42,7 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destinat
         init(1, KW, AM, AP);
 }
 
-ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
+ZynapseConnection::ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
                                      AurynFloat wo, AurynFloat sparseness,
                                      TransmitterType transmitter)
         : DuplexConnection(source, destination, wo, sparseness,
@@ -52,7 +52,7 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destinat
         init(wo, KW, AM, AP);
 }
 
-ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
+ZynapseConnection::ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
                                      AurynFloat wo, AurynFloat sparseness,
                                      AurynFloat a_m, AurynFloat a_p, AurynFloat kw,
                                      TransmitterType transmitter, string name)
@@ -65,7 +65,7 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destinat
                 set_name("ZynapseConnection");
 }
 
-ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
+ZynapseConnection::ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
                                      const char *filename, AurynFloat wo,
                                      AurynFloat a_m, AurynFloat a_p, AurynFloat kw,
                                      TransmitterType transmitter)
@@ -171,10 +171,11 @@ void ZynapseConnection::integrate()
                 *y = w->get_state_begin(1),
                 *z = w->get_state_begin(2);
 
+	PRPGroup *prp_dst = (PRPGroup*)dst;
+	AurynWeight prot = prp_dst->get_prp();
         for (AurynLong i = 0 ; i < w->get_nonzero() ; ++i ) {
                 AurynWeight xyi = x[i] - y[i],
-                        yzi = y[i] - z[i],
-                        prot = dst->get_prp();
+                        yzi = y[i] - z[i];
                 AurynInt gxy;
                 if (tr_gxy->get(i)>THETAG) gxy = 1;
                 else gxy = 0;
@@ -364,7 +365,8 @@ AurynFloat ZynapseConnection::get_g(NeuronID i)
 
 AurynFloat ZynapseConnection::get_protein()
 {
-        return dst->get_prp();
+	PRPGroup *prp_dst = (PRPGroup*)dst;
+        return prp_dst->get_prp();
 }
 
 void ZynapseConnection::g_stats(AurynDouble &mean, AurynDouble &std)

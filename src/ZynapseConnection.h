@@ -28,6 +28,7 @@
 
 #include "auryn_definitions.h"
 #include "DuplexConnection.h"
+#include "PRPGroup.h"
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -148,9 +149,9 @@ namespace auryn {
 
         public:
 
-                ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
+                ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
                                   TransmitterType transmitter=GLUT);
-                ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
+                ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
                                   AurynFloat wo, AurynFloat sparseness, TransmitterType transmitter=GLUT);
                 /*! Default constructor. Sets up a random sparse connection and plasticity parameters
                  *
@@ -164,12 +165,12 @@ namespace auryn {
                  * @param transmitter the TransmitterType (default is GLUT, glutamatergic).
                  * @param name a sensible identifier for the connection used in debug output.
                  */
-                ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
+                ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
                                   AurynFloat wo, AurynFloat sparseness,
                                   AurynFloat a_m, AurynFloat a_p, AurynFloat kw=KW,
                                   TransmitterType transmitter=GLUT,
                                   string name = "ZynapseConnection");
-                ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
+                ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
                                   const char * filename, AurynFloat wo, AurynFloat a_m,
                                   AurynFloat a_p, AurynFloat kw=KW,
                                   TransmitterType transmitter=GLUT);

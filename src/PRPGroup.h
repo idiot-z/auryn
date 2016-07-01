@@ -27,9 +27,7 @@
 #define PRPGROUP_H_
 
 #include "auryn_definitions.h"
-#include "AurynVector.h"
-#include "NeuronGroup.h"
-#include "System.h"
+#include "AIFGroup.h"
 
 namespace auryn {
 
@@ -38,6 +36,8 @@ namespace auryn {
         class PRPGroup : public AIFGroup
         {
         private:
+
+		void free();
 
         protected:
 
@@ -48,16 +48,12 @@ namespace auryn {
 
                 void init();
 
-                void update_pr();
+                void update_prp();
 
         public:
 
                 PRPGroup( NeuronID size, AurynFloat load = 1.0, NeuronID total = 0 );
                 virtual ~PRPGroup();
-                void calculate_scale_constants();
-
-
-                void clear();
 
                 void dopamine_on();
                 void dopamine_off();
