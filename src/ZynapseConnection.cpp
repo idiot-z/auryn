@@ -34,7 +34,7 @@ bool ZynapseConnection::has_been_seeded = false;
  *** constructors ***
  ********************/
 
-ZynapseConnection::ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
+ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
                                      TransmitterType transmitter)
         : DuplexConnection(source, destination, transmitter)
 
@@ -42,7 +42,7 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, PRPGroup *destination
         init(1, KW, AM, AP);
 }
 
-ZynapseConnection::ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
+ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
                                      AurynFloat wo, AurynFloat sparseness,
                                      TransmitterType transmitter)
         : DuplexConnection(source, destination, wo, sparseness,
@@ -52,7 +52,7 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, PRPGroup *destination
         init(wo, KW, AM, AP);
 }
 
-ZynapseConnection::ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
+ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
                                      AurynFloat wo, AurynFloat sparseness,
                                      AurynFloat a_m, AurynFloat a_p, AurynFloat kw,
                                      TransmitterType transmitter, string name)
@@ -65,7 +65,7 @@ ZynapseConnection::ZynapseConnection(SpikingGroup *source, PRPGroup *destination
                 set_name("ZynapseConnection");
 }
 
-ZynapseConnection::ZynapseConnection(SpikingGroup *source, PRPGroup *destination,
+ZynapseConnection::ZynapseConnection(SpikingGroup *source, NeuronGroup *destination,
                                      const char *filename, AurynFloat wo,
                                      AurynFloat a_m, AurynFloat a_p, AurynFloat kw,
                                      TransmitterType transmitter)
@@ -109,7 +109,7 @@ void ZynapseConnection::init(AurynFloat wo, AurynFloat k_w, AurynFloat a_m, Aury
         tr_long = dst->get_post_trace(TAU_LONG);
 
         set_plast_constants(a_m, a_p);
-	stdp_active = true;
+        stdp_active = true;
 
         euler[0] = TUPD/TAUX;
         euler[1] = TUPD/TAUY;
@@ -171,8 +171,7 @@ void ZynapseConnection::integrate()
                 *y = w->get_state_begin(1),
                 *z = w->get_state_begin(2);
 
-	PRPGroup *prp_dst = (PRPGroup*)dst;
-	AurynWeight prot = prp_dst->get_prp();
+        AurynWeight prot = *dst->get_state_variable("prp");
         for (AurynLong i = 0 ; i < w->get_nonzero() ; ++i ) {
                 AurynWeight xyi = x[i] - y[i],
                         yzi = y[i] - z[i];
@@ -233,11 +232,11 @@ void ZynapseConnection::propagate_backward()
 
                         // loop over all presynaptic partners
                         for (const NeuronID * c = bkw->get_row_begin(*spike);
-			     c != bkw->get_row_end(*spike); ++c ) {
+                             c != bkw->get_row_end(*spike); ++c ) {
 
 #ifdef CODE_ACTIVATE_PREFETCHING_INTRINSICS
                                 // prefetches next memory cells to reduce number of
-				// last-level cache misses
+                                // last-level cache misses
                                 _mm_prefetch((const char *)bkw_data[c-bkw_ind+2],  _MM_HINT_NTA);
 #endif
 
@@ -290,8 +289,8 @@ void ZynapseConnection::dw_post(const NeuronID * pre, NeuronID post, AurynWeight
 
 void ZynapseConnection::propagate()
 {
-	propagate_forward();
-	propagate_backward();
+        propagate_forward();
+        propagate_backward();
 }
 
 void ZynapseConnection::evolve()
@@ -365,8 +364,7 @@ AurynFloat ZynapseConnection::get_g(NeuronID i)
 
 AurynFloat ZynapseConnection::get_protein()
 {
-	PRPGroup *prp_dst = (PRPGroup*)dst;
-        return prp_dst->get_prp();
+        return *dst->get_state_variable("prp");
 }
 
 void ZynapseConnection::g_stats(AurynDouble &mean, AurynDouble &std)

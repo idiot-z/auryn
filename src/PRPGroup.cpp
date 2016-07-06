@@ -54,7 +54,11 @@ void PRPGroup::init()
         tau_prp_up = 1.;
         tau_prp_down = 7200.;
 
-        prp_timestamp = 0;
+        timestep_down = 60/dt;
+
+        scale_prp_up = exp(-dt/tau_prp_up);
+        scale_prp_down = exp(-60./tau_prp_down);
+
         dopamine = false;
 }
 
@@ -67,44 +71,35 @@ PRPGroup::~PRPGroup()
         if ( evolve_locally() ) free();
 }
 
+void PRPGroup::evolve()
+{
+        integrate_linear_nmda_synapses();
+        integrate_membrane();
+        check_thresholds();
+        if (dopamine || *clock_ptr%timestep_down==0)
+                update_prp();
+}
+
 void PRPGroup::update_prp() {
         if (!evolve_locally()) return;
-	
-        AurynTime timediff = *clock_ptr-prp_timestamp;
-        if (timediff<=0) return;
-        if (dopamine)
-                *prp = (*prp-1.)*exp(-dt*timediff/tau_prp_up)+1.;
-        else
-                *prp *= exp(-dt*timediff/tau_prp_down);
-        prp_timestamp = *clock_ptr;
 
+        if (dopamine)
+                *prp = (*prp-1.)*scale_prp_up + 1.;
+        else
+                *prp *= scale_prp_down;
 }
 
 void PRPGroup::dopamine_on()
 {
-        update_prp();
         dopamine = true;
 }
 
 void PRPGroup::dopamine_off()
 {
-        update_prp();
         dopamine = false;
 }
 
 void PRPGroup::set_prp(AurynState value)
 {
         *prp = value;
-}
-
-AurynState PRPGroup::get_prp()
-{
-        update_prp();
-	return *prp;
-}
-
-AurynState * PRPGroup::get_prp_ptr()
-{
-        update_prp();
-        return prp;
 }

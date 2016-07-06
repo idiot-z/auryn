@@ -20,6 +20,7 @@
 
 
 #include "auryn.h"
+#include <sys/time.h>
 
 namespace po = boost::program_options;
 namespace mpi = boost::mpi;
@@ -55,6 +56,11 @@ int generate_raster(char *filename, int prot, int n_neuron, Logger *logger) {
         boost::normal_distribution<> dist(0., 0.003);
         boost::variate_generator<boost::mt19937&, boost::normal_distribution<> >
                 die(gen, dist);
+
+        timeval s;
+        gettimeofday(&s, NULL);
+        int n_seed = s.tv_sec;
+        gen.seed(n_seed);
 
         AurynFloat offset = 1; // to avoid negative times
 

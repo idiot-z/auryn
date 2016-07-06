@@ -37,14 +37,15 @@ namespace auryn {
         {
         private:
 
-		void free();
+                void free();
 
         protected:
 
                 AurynState *prp;
                 AurynFloat tau_prp_up, tau_prp_down;
+                AurynFloat scale_prp_up, scale_prp_down;
                 bool dopamine;
-                AurynTime prp_timestamp;
+                AurynTime timestep_down;
 
                 void init();
 
@@ -55,11 +56,11 @@ namespace auryn {
                 PRPGroup( NeuronID size, AurynFloat load = 1.0, NeuronID total = 0 );
                 virtual ~PRPGroup();
 
+                void evolve();
+
                 void dopamine_on();
                 void dopamine_off();
                 void set_prp(AurynState value);
-                AurynState get_prp();
-                AurynState *get_prp_ptr();
 
         };
 
