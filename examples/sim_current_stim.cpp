@@ -31,7 +31,6 @@
 using namespace auryn;
 
 namespace po = boost::program_options;
-namespace mpi = boost::mpi;
 
 int main(int ac, char* av[]) 
 {
@@ -42,23 +41,7 @@ int main(int ac, char* av[])
 	string tmpstr;
 
 	// BEGIN Global definitions
-	mpi::environment env(ac, av);
-	mpi::communicator world;
-	communicator = &world;
-
-	try
-	{
-		sprintf(strbuf, "out_current_stim.%d.log", world.rank());
-		string logfile = strbuf;
-		logger = new Logger(logfile,world.rank(),PROGRESS,EVERYTHING);
-	}
-	catch ( AurynOpenFileException excpt )
-	{
-		std::cerr << "Cannot proceed without log file. Exiting all ranks ..." << '\n';
-		env.abort(1);
-	}
-
-	sys = new System(&world);
+	auryn_init( ac, av, ".", outputfile );
 	// END Global definitions
 	
 	IFGroup * neurons = new IFGroup(2);
@@ -79,10 +62,9 @@ int main(int ac, char* av[])
 	logger->msg("Running ...",PROGRESS);
 	sys->run(1);
 
-	logger->msg("Freeing ...",PROGRESS,true);
-	delete sys;
-
 	if (errcode)
-		env.abort(errcode);
+		auryn_abort(errcode);
+	logger->msg("Freeing ...",PROGRESS,true);
+	auryn_free();
 	return errcode;
 }

@@ -23,6 +23,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include "auryn/AurynVersion.h"
 
 using namespace auryn;
 
@@ -51,7 +52,7 @@ AurynLong find_frame( std::ifstream * file, AurynTime target )
 		else hi = pivot;
 	}
 
-	return hi;
+	return lo;
 }
 
 
@@ -68,15 +69,16 @@ void read_header( std::ifstream * input, double& dt, AurynLong num_events, doubl
 	dt = 1.0/spike_data.time;
 
 	// do some version checking
+	AurynVersion build;
 	NeuronID tag = spike_data.neuronID;
-	if ( tag/1000 != tag_binary_spike_monitor/1000 ) {
+	if ( tag/1000 != build.tag_binary_spike_monitor/1000 ) {
 		std::cerr << "Header not recognized. " 
 			"Not a binary Auryn monitor file?" 
 			 << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
-	if ( tag != tag_binary_spike_monitor ) {
+	if ( tag != build.tag_binary_spike_monitor ) {
 		std::cerr << "# Warning: Either the Auryn version does not match "
 			"the version of this tool or this is not a spike "
 			"raster file." << std::endl; 
@@ -102,7 +104,6 @@ int main(int ac, char* av[])
 	double seconds_to_extract_from_end = -1.0; // negative means disabled
 	NeuronID maxid = std::numeric_limits<NeuronID>::max();
 	// one more decimal than neede to show values are not rounded
-	int decimal_places = -std::log(dt)/std::log(10)+2; 
 	bool debug_output = false;
 
 	try {
@@ -129,10 +130,11 @@ int main(int ac, char* av[])
 		}
 
 		if (vm.count("version")) {
+			AurynVersion build;
 			std::cout << "Auryn Binary Extract version " 
-				 << AURYNVERSION << "." 
-				 << AURYNSUBVERSION << "."
-				 << AURYNREVISION << "\n";
+				 << build.version << "." 
+				 << build.subversion << "."
+				 << build.revision_number << "\n";
 			return EXIT_SUCCESS;
 		}
 
@@ -183,7 +185,7 @@ int main(int ac, char* av[])
 		exit(EXIT_FAILURE);
 	}
 
-	for ( int i = 0 ; i < input_filenames.size() ; ++i ) {
+	for ( unsigned int i = 0 ; i < input_filenames.size() ; ++i ) {
 		std::ifstream * tmp = new std::ifstream( input_filenames[i].c_str(), std::ios::binary );
 		inputs.push_back(tmp);
 		if (!(*tmp)) {
@@ -247,7 +249,7 @@ int main(int ac, char* av[])
 
 
 	// set all streams to respetive start frame
-	for ( int i = 0 ; i < inputs.size() ; ++i ) {
+	for ( unsigned int i = 0 ; i < inputs.size() ; ++i ) {
 		// compute start and end frames
 		AurynLong start_frame = find_frame(inputs[i], from_time/dt);
 
@@ -264,11 +266,12 @@ int main(int ac, char* av[])
 
 	// read first frames from all files
 	std::vector<SpikeEvent_type> frames(inputs.size());
-	for ( int i = 0 ; i < frames.size() ; ++i ) {
+	for ( unsigned int i = 0 ; i < frames.size() ; ++i ) {
 		inputs[i]->read((char*)&frames[i], sizeof(SpikeEvent_type));
 	}
 
 	AurynTime time_reference = from_time/dt;
+	int decimal_places = -std::log(dt)/std::log(10)+2; 
 
 	// open output filestream if needed
 	std::ofstream of;
@@ -286,7 +289,7 @@ int main(int ac, char* av[])
 		int current_stream = 0;
 		AurynLong mintime = std::numeric_limits<AurynLong>::max();
 		bool eofs = true;
-		for ( int i = 0 ; i < frames.size() ; ++i ) {
+		for ( unsigned int i = 0 ; i < frames.size() ; ++i ) {
 			eofs = eofs && inputs[i]->eof();
 			if ( inputs[i]->eof() ) continue;
 			if ( frames[i].time < mintime ) { 
@@ -320,7 +323,7 @@ int main(int ac, char* av[])
  		of.close();
 
 	// close input streams
-	for ( int i = 0 ; i < frames.size() ; ++i ) {
+	for ( unsigned int i = 0 ; i < frames.size() ; ++i ) {
 		inputs[i]->close();
 	}
 

@@ -23,7 +23,6 @@
 using namespace auryn;
 
 namespace po = boost::program_options;
-namespace mpi = boost::mpi;
 
 int main(int ac, char* av[]) 
 {
@@ -242,21 +241,11 @@ int main(int ac, char* av[])
     }
 
 
-	// BEGIN Global init
-	mpi::environment env(ac, av);
-	mpi::communicator world;
-	communicator = &world;
-
-	sprintf(strbuf, "%s/bg_static.%d.log", dir.c_str(), world.rank());
-	string logfile = strbuf;
-	logger = new Logger(logfile,world.rank(),PROGRESS,EVERYTHING);
-
-	sys = new System(&world);
-	// END Global init
+	auryn_init(ac, av);
 
 	if (!infilename.empty()) {
 		std::stringstream iss;
-		iss << infilename << "." << world.rank();
+		iss << infilename << "." << sys->mpi_rank();
 		infilename = iss.str();
 	}
 
@@ -304,14 +293,14 @@ int main(int ac, char* av[])
 
 
 	if ( !fast ) {
-		sprintf(strbuf, "%s/bg_static.%d.ras", dir.c_str(), world.rank());
+		sprintf(strbuf, "%s/bg_static.%d.ras", dir.c_str(), sys->mpi_rank());
 		SpikeMonitor * smon_e = new SpikeMonitor( neurons_e, strbuf , 2500);
 	}
 
-	sprintf(strbuf, "%s/bg_static.%d.prate", dir.c_str(), world.rank());
+	sprintf(strbuf, "%s/bg_static.%d.prate", dir.c_str(), sys->mpi_rank());
 	PopulationRateMonitor * pmon_e = new PopulationRateMonitor( neurons_e, strbuf, 1.0 );
 
-	sprintf(strbuf, "%s/bg_static.%d.rt", dir.c_str(), world.rank());
+	sprintf(strbuf, "%s/bg_static.%d.rt", dir.c_str(), sys->mpi_rank());
 	RealTimeMonitor * rtmon = new RealTimeMonitor( strbuf );
 
 	RateChecker * chk = new RateChecker( neurons_e , 0.1 , 20. , tau_chk);
@@ -321,12 +310,13 @@ int main(int ac, char* av[])
 	if (!sys->run(simtime,true)) 
 			errcode = 1;
 
-	logger->msg("Freeing ...",PROGRESS,true);
-	delete sys;
 
 	if (errcode) {
-		env.abort(errcode);
+		auryn_abort(errcode);
 	}
+
+	logger->msg("Freeing ...",PROGRESS,true);
+	auryn_free();
 
 	return errcode;
 }

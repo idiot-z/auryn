@@ -26,7 +26,6 @@
 using namespace auryn;
 
 namespace po = boost::program_options;
-namespace mpi = boost::mpi;
 
 int main(int ac,char *av[]) {
 	string dir = ".";
@@ -98,28 +97,18 @@ int main(int ac,char *av[]) {
         std::cerr << "Exception of unknown type!\n";
     }
 
-	// BEGIN Global definitions
-	mpi::environment env(ac, av);
-	mpi::communicator world;
-	communicator = &world;
+	auryn_init(ac, av, dir, simname);
 
 	std::stringstream oss;
-	oss << dir  << "/" << simname << "." << world.rank() << ".";
+	oss << dir  << "/" << simname << "." << sys->mpi_rank() << ".";
 	string outputfile = oss.str();
 
-	char tmp [255];
-	std::stringstream logfile;
-	logfile << outputfile << "log";
-	logger = new Logger(logfile.str(),world.rank());
-
-	sys = new System(&world);
-	// END Global definitions
 
 
 	logger->msg("Setting up neuron groups ...",PROGRESS,true);
 	IFGroup * neurons_e = new IFGroup( NE);
 	neurons_e->set_ampa_nmda_ratio(1.0);
-	neurons_e->random_nmda(0.1,1);
+	neurons_e->randomize_state_vector_gauss("g_nmda",0.1,1);
 	IFGroup * neurons_i = new IFGroup( NI);
 	neurons_i->set_ampa_nmda_ratio(1.0);
 	neurons_i->set_tau_mem(10e-3);
@@ -200,11 +189,12 @@ int main(int ac,char *av[]) {
 	logger->msg("Saving network state ..." ,PROGRESS,true);
 	sys->save_network_state(outputfile);
 
-	logger->msg("Freeing ..." ,PROGRESS,true);
-	delete sys;
 
 	if (errcode)
-		env.abort(errcode);
+		auryn_abort(errcode);
+
+	logger->msg("Freeing ..." ,PROGRESS,true);
+	auryn_free();
 
 	return errcode;
 }

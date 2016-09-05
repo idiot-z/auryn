@@ -20,10 +20,25 @@
 
 #include "auryn.h"
 
-#define NE 8000
-#define NI 2000
-#define NP 1000
-#define NSTIM 20
+/*!\file 
+ *
+ * \brief This simulation illustrates inhibitory synaptic plasticity as modeled
+ * in Vogels et al. (2011) 
+ *
+ * This simulation illustrates inhibitory synapitc plasticity as modeled in our
+ * paper: Vogels, T.P., Sprekeler, H., Zenke, F., Clopath, C., and Gerstner, W.
+ * (2011). Inhibitory Plasticity Balances Excitation and Inhibition in Sensory
+ * Pathways and Memory Networks. Science 334, 1569–1573.
+ * 
+ * Note that this is a parallel implementation of this network which requires a
+ * larger axonal delay than in the original paper. In this example the delay is
+ * 0.8ms which corresponds to Auryn's MINDELAY.
+ *
+ * */
+
+#define NE 8000 //!< Number of excitatory neurons
+#define NI 2000 //!< Number of inhibitory neurons
+#define NP 1000 //!< Number of Poisson input neurons
 
 using namespace auryn;
 namespace po = boost::program_options;
@@ -180,22 +195,12 @@ int main(int ac, char* av[])
     }
 
 	// BEGIN Global definitions
-	mpi::environment env(ac, av);
-	mpi::communicator world;
-	communicator = &world;
-
-	netstatfile = outputfile;
-	std::stringstream oss;
-	oss << outputfile << "." << world.rank();
-	string basename = oss.str();
-	oss << ".log";
-	string logfile = oss.str();
-	logger = new Logger(logfile,world.rank());
-
-	sys = new System(&world);
+	auryn_init( ac, av );
 	// END Global definitions
-
-
+	std::stringstream oss;
+    oss << outputfile << "." << sys->mpi_rank();
+    string basename = oss.str();
+	
 
 	logger->msg("Setting up neuron groups ...",PROGRESS,true);
 	TIFGroup * neurons_e = new TIFGroup(NE);
@@ -289,7 +294,7 @@ int main(int ac, char* av[])
 	sys->save_network_state(netstatfile);
 
 	logger->msg("Freeing ...",PROGRESS,true);
-	delete sys;
+	auryn_free();
 
 	logger->msg("Exiting ...",PROGRESS,true);
 	return errcode;

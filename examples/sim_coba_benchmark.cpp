@@ -18,12 +18,32 @@
 * along with Auryn.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*!\file 
+ *
+ * \brief Simulation code for the Vogels Abbott benchmark following Brette et al. (2007)
+ *
+ * This simulation implements the Vogels Abbott benchmark as suggested by
+ * Brette et al. (2007) Journal of Computational Neuroscience 23: 349-398. 
+ *
+ * The network is based on a network by Vogels and Abbott as described in 
+ * Vogels, T.P., and Abbott, L.F. (2005).  Signal propagation and logic gating
+ * in networks of integrate-and-fire neurons. J Neurosci 25, 10786.
+ *
+ * We used this network for benchmarking Auryn against other simulators in
+ * Zenke, F., and Gerstner, W. (2014). Limits to high-speed simulations of
+ * spiking neural networks using general-purpose computers. Front Neuroinform
+ * 8, 76.
+ *
+ * See build/release/run_benchmark.sh for automatically run benchmarks to
+ * compare the performance of different Auryn builds.
+ *
+ * */
+
 #include "auryn.h"
 
 using namespace auryn;
 
 namespace po = boost::program_options;
-namespace mpi = boost::mpi;
 
 int main(int ac,char *av[]) {
 	string dir = "/tmp";
@@ -113,23 +133,12 @@ int main(int ac,char *av[]) {
         std::cerr << "Exception of unknown type!\n";
     }
 
-	// BEGIN Global stuff
-	mpi::environment env(ac, av);
-	mpi::communicator world;
-	communicator = &world;
 
-	oss << dir  << "/coba." << world.rank() << ".";
+	auryn_init( ac, av, dir );
+	oss << dir  << "/coba." << sys->mpi_rank() << ".";
 	string outputfile = oss.str();
-
-	char tmp [255];
-	std::stringstream logfile;
-	logfile << outputfile << "log";
-	logger = new Logger(logfile.str(),world.rank());
-
-	sys = new System(&world);
-
 	if ( fast ) sys->quiet = true;
-	// END Global stuff
+
 
 	logger->msg("Setting up neuron groups ...",PROGRESS,true);
 
@@ -190,7 +199,7 @@ int main(int ac,char *av[]) {
 	if (!sys->run(simtime,true)) 
 			errcode = 1;
 
-	if ( world.rank() == 0 ) {
+	if ( sys->mpi_rank() == 0 ) {
 		logger->msg("Saving elapsed time ..." ,PROGRESS,true);
 		char filenamebuf [255];
 		sprintf(filenamebuf, "%s/elapsed.dat", dir.c_str());
@@ -200,13 +209,10 @@ int main(int ac,char *av[]) {
 		timefile.close();
 	}
 
-	logger->msg("Freeing ..." ,PROGRESS,true);
-	delete sys;
-
 	if (errcode)
-		env.abort(errcode);
+		auryn_abort(errcode);
 
-
-
+	logger->msg("Freeing ..." ,PROGRESS,true);
+	auryn_free();
 	return errcode;
 }

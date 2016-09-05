@@ -22,10 +22,18 @@
 
 #define N 1
 
+/*!\file 
+ *
+ * \brief Example simulation which simulates one Poisson input with short-term plasticity onto a single 
+ * postsynaptic neuron and records the membrane potential 
+ *
+ * As opposed to sim_epsp.cpp this examples uses a connection with short-term plasticity (Tsodyks Markram model) 
+ * which is implemented in STPConnection.
+ * */
+
 using namespace auryn;
 
 namespace po = boost::program_options;
-namespace mpi = boost::mpi;
 
 int main(int ac, char* av[]) 
 {
@@ -37,15 +45,8 @@ int main(int ac, char* av[])
 	AurynWeight w = 1.0;
 
 	// BEGIN Global definitions
-	mpi::environment env(ac, av);
-	mpi::communicator world;
-	communicator = &world;
-
-	sprintf(strbuf, "out_epsp_stp.%d.log", world.rank());
-	string logfile = strbuf;
-	logger = new Logger(logfile,world.rank(),PROGRESS,EVERYTHING);
-
-	sys = new System(&world);
+	auryn_init( ac, av );
+	sys->set_simulation_name(outputfile);
 	// END Global definitions
 
 	// Sets up a single presynaptic Poisson neuron which fires at 1Hz
@@ -113,6 +114,6 @@ int main(int ac, char* av[])
 	delete sys;
 
 	if (errcode)
-		env.abort(errcode);
+		auryn_abort(errcode);
 	return errcode;
 }

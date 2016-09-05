@@ -22,38 +22,26 @@
 
 #define N 1
 
+/*!\file 
+ *
+ * \brief Example simulation which simulates one Poisson input onto a single postsynaptic neuron and records the membrane potential 
+ * */
+
 using namespace auryn;
 
 namespace po = boost::program_options;
-namespace mpi = boost::mpi;
 
 int main(int ac, char* av[]) 
 {
 
 	int errcode = 0;
-	char strbuf [255];
 	string simname = "out_epsp";
+	string logfile = simname;
 	string tmpstr;
 	AurynWeight w = 1.0;
 
 	// BEGIN Global definitions
-	mpi::environment env(ac, av);
-	mpi::communicator world;
-	communicator = &world;
-
-	try
-	{
-		sprintf(strbuf, "out_epsp.%d.log", world.rank());
-		string logfile = strbuf;
-		logger = new Logger(logfile,world.rank(),PROGRESS,EVERYTHING);
-	}
-	catch ( AurynOpenFileException excpt )
-	{
-		std::cerr << "Cannot proceed without log file. Exiting all ranks ..." << '\n';
-		env.abort(1);
-	}
-
-	sys = new System(&world);
+	auryn_init( ac, av );
 	sys->set_simulation_name(simname);
 	// END Global definitions
 
@@ -80,6 +68,6 @@ int main(int ac, char* av[])
 	delete sys;
 
 	if (errcode)
-		env.abort(errcode);
+		auryn_abort(errcode);
 	return errcode;
 }
